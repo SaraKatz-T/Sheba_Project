@@ -1,0 +1,13 @@
+# מפתחות - לעולם לא עולים ל-Git
+.env
+
+# סביבה וירטואלית ו-PyCharm
+.venv/
+.idea/
+__pycache__/
+
+# טפסים ותוצאות - מכילים פרטים אישיים
+data/input/*
+data/output/*
+!data/input/.gitkeep
+!data/output/.gitkeep
