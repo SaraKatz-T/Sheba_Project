@@ -27,8 +27,10 @@ p {
 
 h1 {
   font-size: var(--text-xl);
-  font-weight: 700;
+  font-weight: 800;
+  line-height: 1.2;
   letter-spacing: -0.01em;
+  color: var(--brand-600);
 }
 
 button,
@@ -95,15 +97,16 @@ a {
   justify-content: center;
   gap: var(--s-2);
   min-height: 40px;
-  padding: 0 var(--s-4);
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  font-weight: 500;
+  padding: 0 var(--s-5);
+  border: 1.5px solid transparent;
+  border-radius: var(--pill);
+  font-weight: 600;
   cursor: pointer;
   transition:
     background-color var(--fast) var(--ease),
     border-color var(--fast) var(--ease),
-    color var(--fast) var(--ease);
+    color var(--fast) var(--ease),
+    box-shadow var(--fast) var(--ease);
 }
 
 .btn:disabled {
@@ -117,7 +120,20 @@ a {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--brand-700);
+  background: var(--brand-800);
+  box-shadow: var(--shadow);
+}
+
+.btn-outline {
+  background: transparent;
+  border-color: var(--ink-900);
+  color: var(--ink-900);
+}
+
+.btn-outline:hover:not(:disabled) {
+  border-color: var(--brand-500);
+  color: var(--brand-600);
+  background: var(--brand-50);
 }
 
 .btn-quiet {
@@ -127,22 +143,23 @@ a {
 
 .btn-quiet:hover:not(:disabled) {
   background: var(--brand-50);
-  color: var(--brand-700);
+  color: var(--brand-600);
 }
 
 .btn-block {
   width: 100%;
-  min-height: 46px;
+  min-height: 50px;
+  font-size: var(--text-md);
 }
 
 .icon-btn {
   display: inline-grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: 50%;
   background: transparent;
   color: var(--ink-500);
   cursor: pointer;
@@ -165,12 +182,15 @@ a {
 
 .input {
   width: 100%;
-  min-height: 46px;
+  min-height: 50px;
   padding: 0 var(--s-4);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   background: var(--surface);
-  transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
+  transition:
+    border-color var(--fast) var(--ease),
+    box-shadow var(--fast) var(--ease),
+    background-color var(--fast) var(--ease);
 }
 
 .input:hover {
@@ -180,6 +200,7 @@ a {
 .input:focus {
   outline: none;
   border-color: var(--brand-500);
+  background: rgb(223 224 255 / 0.12);
   box-shadow: var(--focus);
 }
 

@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 import { login } from '../api/endpoints'
 import { keys, queryClient, useSession } from '../api/queries'
-import { Brand } from '../components/Brand'
+import { Logo } from '../components/Brand'
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 
@@ -48,12 +48,31 @@ export function LoginPage() {
 
   return (
     <div className="login">
-      <main className="login-card fade-up">
-        <Brand />
-        <h1>כניסה למערכת</h1>
-        <p className="login-lead">הקלידו את סיסמת המעבדה כדי להמשיך</p>
+      <div className="rings" aria-hidden="true">
+        <span className="ring ring-pink" />
+        <span className="ring ring-teal" />
+      </div>
 
-        <form className="login-form" onSubmit={submit} noValidate>
+      <header className="login-top">
+        <Logo className="login-logo" />
+      </header>
+
+      <main className="login-main">
+        <div className="login-hero fade-up">
+          <h1 className="hero-title">
+            קליטת טפסי התחייבות
+            <span className="hero-accent">המעבדה המרכזית לנגיפים</span>
+          </h1>
+          <p className="hero-lead">טפסים סרוקים, מצולמים ובכתב יד נקלטים, מחולצים ונבדקים במקום אחד.</p>
+        </div>
+
+        <section className="login-card fade-up" aria-labelledby="login-title">
+          <h2 id="login-title" className="login-title">
+            כניסה למערכת
+          </h2>
+          <p className="login-lead">הקלידו את סיסמת המעבדה כדי להמשיך</p>
+
+          <form className="login-form" onSubmit={submit} noValidate>
           <div>
             <label className="field-label" htmlFor={inputId}>
               סיסמה
@@ -107,13 +126,14 @@ export function LoginPage() {
               </>
             )}
           </button>
-        </form>
+          </form>
 
-        {USE_MOCK && (
-          <p className="login-foot">
-            מצב מדומה: הסיסמה היא <span className="ltr">demo</span>
-          </p>
-        )}
+          {USE_MOCK && (
+            <p className="login-foot">
+              מצב מדומה: הסיסמה היא <span className="ltr">demo</span>
+            </p>
+          )}
+        </section>
       </main>
     </div>
   )

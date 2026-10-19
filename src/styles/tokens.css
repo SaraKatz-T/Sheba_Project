@@ -1,44 +1,58 @@
 /*
- * Design tokens. The brand colors are placeholders until the official Sheba logo
- * is added to assets/; then --brand-* are re-derived from it and nothing else changes.
+ * Design tokens, derived from the official Sheba logo (assets/logo.svg) and the
+ * visual language of sheba.co.il: deep navy, pink and teal accents, pale blue ground,
+ * pill-shaped controls and soft navy-tinted shadows.
  */
 :root {
-  /* Brand (placeholder) */
-  --brand-700: #0b3f66;
-  --brand-600: #0e5486;
-  --brand-500: #1667a3;
-  --brand-100: #e3eef8;
-  --brand-50: #f1f6fb;
+  /* Brand */
+  --brand-800: #0e1452;
+  --brand-700: #10175a;
+  --brand-600: #161f72; /* Sheba primary navy */
+  --brand-500: #1d2678;
+  --brand-logo: #2c2666; /* logo wordmark */
+  --brand-100: #dfe0ff;
+  --brand-50: #f0f1fc;
+
+  --pink: #ea3d85; /* logo/site accent – decorative and large text only */
+  --pink-ink: #c21f66; /* accessible on white */
+  --pink-50: #fcf5f9;
+
+  --teal: #10bf9c; /* site accent – decorative only */
+  --teal-logo: #31b296;
+  --teal-ink: #0b7562; /* accessible on white */
+  --teal-50: #e6f8f3;
 
   /* Neutrals */
-  --ink-900: #14202b;
-  --ink-700: #34424f;
-  --ink-500: #5a6876;
-  --ink-300: #a3aeb9;
-  --line: #e2e7ec;
-  --line-strong: #cfd6dd;
-  --bg: #f6f8fa;
+  --ink-900: #1e1e2e;
+  --ink-700: #3f4058;
+  --ink-500: #5f5e6e;
+  --ink-300: #a6a8bd;
+  --line: #e6e8f2;
+  --line-strong: #d2d5e6;
+  --bg: #f3f5fa;
   --surface: #ffffff;
 
   /* States */
   --flag-bg: #fff5d1;
   --flag-line: #e7b93c;
   --flag-ink: #6e4f00;
-  --ok-bg: #e6f4ec;
-  --ok-ink: #1a6b42;
+  --ok-bg: var(--teal-50);
+  --ok-ink: var(--teal-ink);
   --danger-bg: #fdecea;
-  --danger-ink: #a5281b;
+  --danger-ink: #b0261a;
   --info-bg: var(--brand-50);
-  --info-ink: var(--brand-700);
+  --info-ink: var(--brand-600);
 
-  /* Type */
+  /* Type. sheba.co.il uses the licensed "Simpler" font; Heebo is the closest free match.
+     If the lab supplies Simpler, add its @font-face and put it first here. */
   --font: 'Heebo Variable', 'Heebo', 'Segoe UI', Arial, sans-serif;
   --text-xs: 0.8125rem;
   --text-sm: 0.875rem;
   --text-md: 1rem;
   --text-lg: 1.125rem;
-  --text-xl: 1.5rem;
-  --text-2xl: 2rem;
+  --text-xl: 1.75rem;
+  --text-2xl: 2.25rem;
+  --text-hero: clamp(2.25rem, 1.4rem + 2.6vw, 3.75rem);
 
   /* Space */
   --s-1: 4px;
@@ -51,22 +65,27 @@
   --s-8: 64px;
 
   /* Shape and depth */
-  --radius-sm: 6px;
-  --radius: 10px;
+  --radius-sm: 8px;
+  --radius: 12px;
   --radius-lg: 16px;
-  --shadow-sm: 0 1px 2px rgb(20 32 43 / 0.06);
-  --shadow: 0 1px 3px rgb(20 32 43 / 0.06), 0 6px 20px rgb(20 32 43 / 0.06);
-  --focus: 0 0 0 3px rgb(22 103 163 / 0.35);
+  --radius-xl: 24px;
+  --pill: 999px;
+  --shadow-sm: 0 1px 3px rgb(22 31 114 / 0.06);
+  --shadow: 0 6px 20px rgb(22 31 114 / 0.1);
+  --shadow-lg: 0 12px 40px rgb(22 31 114 / 0.14);
+  --focus: 0 0 0 3px rgb(29 38 120 / 0.3);
 
   /* Motion */
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   --fast: 140ms;
   --base: 220ms;
+  --slow: 600ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
   :root {
     --fast: 0ms;
     --base: 0ms;
+    --slow: 0ms;
   }
 }
