@@ -17,6 +17,9 @@ const FALLBACK_MESSAGES: Record<number, string> = {
 
 const SERVER_ERROR_MESSAGE = 'תקלה בשרת. כדאי לנסות שוב בעוד רגע.'
 
+// A 404 without the contract's JSON error body means the request never reached the API.
+const NOT_THE_API_MESSAGE = 'השרת לא מכיר את הבקשה הזו. כדאי לבדוק את כתובת השרת בהגדרות.'
+
 export class ApiError extends Error {
   readonly status: number
   readonly code: string
@@ -43,10 +46,11 @@ export async function errorFromResponse(res: Response): Promise<ApiError> {
     // Non-JSON error body; fall back to the status message.
   }
   const err = body?.error
+  const fallback = !err && res.status === 404 ? NOT_THE_API_MESSAGE : messageForStatus(res.status)
   return new ApiError(
     res.status,
     err?.code ?? `http_${res.status}`,
-    err?.message || messageForStatus(res.status),
+    err?.message || fallback,
     err?.existing_id,
   )
 }
