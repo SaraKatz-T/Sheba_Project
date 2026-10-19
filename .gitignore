@@ -1,0 +1,14 @@
+node_modules/
+dist/
+*.log
+
+# Local settings and secrets never go to git
+.env
+.env.*
+!.env.example
+
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
