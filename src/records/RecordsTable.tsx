@@ -19,6 +19,7 @@ interface Column {
 }
 
 const COLUMNS: Column[] = [
+  { key: 'commitment', label: 'מספר התחייבות' },
   { key: 'name', label: 'שם' },
   { key: 'id', label: 'ת"ז' },
   { key: 'form_date', label: 'תאריך הטופס' },
@@ -92,21 +93,32 @@ export function RecordsTable({ forms, sort, dir, onSort, duplicates, onShowDupli
               return (
                 <tr key={f.id} onClick={(e) => !(e.target as Element).closest('a, button') && navigate(formLink(f))}>
                   <td>
-                    <div className="cell-name">
-                    <Link to={formLink(f)}>{f.person_name ?? <span className="muted">טרם חולץ</span>}</Link>
-                    {dup && (
-                      <button
-                        type="button"
-                        className="chip chip-pending chip-button"
-                        onClick={onShowDuplicates}
-                        title={`הת"ז הזו מופיעה ב-${dup.forms.length} טפסים`}
-                      >
-                        <Copy size={12} aria-hidden="true" />
-                        כפילות
-                      </button>
-                    )}
+                    <div className="cell-key">
+                      <Link to={formLink(f)}>
+                        {f.commitment_number ? (
+                          <span className="ltr num">{f.commitment_number}</span>
+                        ) : (
+                          <span className="muted">{f.status === 'failed' ? 'לא נקרא' : 'טרם חולץ'}</span>
+                        )}
+                      </Link>
+                      {dup && (
+                        <button
+                          type="button"
+                          className="chip chip-pending chip-button"
+                          onClick={onShowDuplicates}
+                          title={
+                            dup.kind === 'form'
+                              ? `מספר ההתחייבות הזה מופיע ב-${dup.forms.length} טפסים`
+                              : `הת"ז הזו מופיעה ב-${dup.forms.length} טפסים`
+                          }
+                        >
+                          <Copy size={12} aria-hidden="true" />
+                          כפילות
+                        </button>
+                      )}
                     </div>
                   </td>
+                  <td className="cell-name">{f.person_name ?? <span className="muted">—</span>}</td>
                   <td>
                     <span className="ltr num">{f.id_number ?? '—'}</span>
                   </td>

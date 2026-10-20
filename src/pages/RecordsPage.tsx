@@ -49,7 +49,7 @@ export function RecordsPage() {
     update(
       key === filters.sort
         ? { dir: filters.dir === 'asc' ? 'desc' : 'asc' }
-        : { sort: key, dir: key === 'name' || key === 'id' || key === 'status' ? 'asc' : 'desc' },
+        : { sort: key, dir: ['commitment', 'name', 'id', 'status'].includes(key) ? 'asc' : 'desc' },
     )
 
   const showDuplicates = () => {
@@ -140,7 +140,7 @@ export function RecordsPage() {
             </button>
           }
         >
-          אפשר לחפש חלק מהשם, כמה ספרות מהת"ז, או תאריך כמו 20.10.
+          אפשר לחפש מספר התחייבות, חלק מהשם, כמה ספרות מהת"ז, או תאריך כמו 20.10.
         </EmptyState>
       ) : filters.view === 'board' ? (
         <KanbanBoard

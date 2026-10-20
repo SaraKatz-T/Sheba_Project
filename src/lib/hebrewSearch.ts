@@ -1,4 +1,4 @@
-// Forgiving search over names, ID numbers and dates, tuned for Hebrew:
+// Forgiving search over commitment numbers, names, ID numbers and dates, tuned for Hebrew:
 // final letters (ם/מ, ן/נ, ץ/צ, ף/פ, ך/כ), niqqud, geresh/gershayim, spacing,
 // and small spelling slips (one letter per short word, two per long word).
 import type { FormSummary } from '../api/types'
@@ -69,12 +69,13 @@ function textMatches(query: string, haystack: string): boolean {
 
 const stripZeros = (digits: string) => digits.replace(/^0+/, '')
 
-function idMatches(queryDigits: string, id: string | null): boolean {
-  if (!id) return false
+function numberMatches(queryDigits: string, value: string | null): boolean {
+  if (!value) return false
   const q = stripZeros(queryDigits)
-  const target = stripZeros(id.replace(/\D/g, ''))
+  const target = stripZeros(value.replace(/\D/g, ''))
+  if (!q || !target) return false
   if (target.includes(q)) return true
-  // A full-length ID with one wrong or swapped digit.
+  // A full-length number with one wrong or swapped digit.
   return q.length >= 7 && editDistance(q, target, 1) <= 1
 }
 
@@ -106,7 +107,7 @@ function dateMatches(q: DateQuery, key: string | null): boolean {
   return d === q.day && mo === q.month && (q.year === null || q.year === y)
 }
 
-export type SearchKind = 'date' | 'id' | 'text'
+export type SearchKind = 'date' | 'number' | 'text'
 
 export interface Matcher {
   kind: SearchKind
@@ -126,9 +127,13 @@ export function buildMatcher(raw: string): Matcher | null {
     }
   }
 
+  // Digits search the commitment number and the ID number.
   const digits = trimmed.replace(/[\s-]/g, '')
   if (/^\d+$/.test(digits)) {
-    return { kind: 'id', test: (f) => idMatches(digits, f.id_number) }
+    return {
+      kind: 'number',
+      test: (f) => numberMatches(digits, f.commitment_number) || numberMatches(digits, f.id_number),
+    }
   }
 
   const query = normalizeHebrew(trimmed)

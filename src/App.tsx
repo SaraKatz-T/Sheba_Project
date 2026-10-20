@@ -52,7 +52,8 @@ function RequireAuth({ children }: { children: ReactNode }) {
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      {/* No Suspense here, so transitions only delay filter controls; update the URL synchronously. */}
+      <BrowserRouter useTransitions={false}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route

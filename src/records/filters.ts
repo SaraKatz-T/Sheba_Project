@@ -12,7 +12,7 @@ export const ALL_STATUSES: FormStatus[] = [
   'rejected',
 ]
 
-export type SortKey = 'name' | 'id' | 'form_date' | 'received' | 'status' | 'uncertain'
+export type SortKey = 'commitment' | 'name' | 'id' | 'form_date' | 'received' | 'status' | 'uncertain'
 export type View = 'table' | 'board'
 
 export interface Filters {
@@ -26,7 +26,7 @@ export interface Filters {
   dir: 'asc' | 'desc'
 }
 
-const SORT_KEYS: SortKey[] = ['name', 'id', 'form_date', 'received', 'status', 'uncertain']
+const SORT_KEYS: SortKey[] = ['commitment', 'name', 'id', 'form_date', 'received', 'status', 'uncertain']
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/
 
 export function readFilters(params: URLSearchParams): Filters {
@@ -92,6 +92,10 @@ const hebrew = new Intl.Collator('he')
 
 function compare(a: FormSummary, b: FormSummary, key: SortKey): number {
   switch (key) {
+    case 'commitment':
+      return (a.commitment_number ?? '￿').localeCompare(b.commitment_number ?? '￿', undefined, {
+        numeric: true,
+      })
     case 'name':
       return hebrew.compare(a.person_name ?? '￿', b.person_name ?? '￿')
     case 'id':
@@ -113,9 +117,29 @@ export function sortForms(forms: FormSummary[], key: SortKey, dir: 'asc' | 'desc
   return [...forms].sort((a, b) => sign * compare(a, b, key) || b.received_at.localeCompare(a.received_at))
 }
 
-/** Date-range presets, as yyyy-mm-dd in Israel time. */
-export function presetRange(days: number): { from: string; to: string } {
-  const to = israelDateKey(new Date().toISOString())
-  const fromDate = new Date(Date.now() - (days - 1) * 86_400_000)
-  return { from: israelDateKey(fromDate.toISOString()), to }
+const dayKey = (daysAgo: number) => israelDateKey(new Date(Date.now() - daysAgo * 86_400_000).toISOString())
+
+export type DatePreset = 'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'
+
+/** Intake-date presets, as yyyy-mm-dd ranges in Israel time. */
+export function presetRange(preset: Exclude<DatePreset, 'all' | 'custom'>): { from: string; to: string } {
+  switch (preset) {
+    case 'today':
+      return { from: dayKey(0), to: dayKey(0) }
+    case 'yesterday':
+      return { from: dayKey(1), to: dayKey(1) }
+    case 'week':
+      return { from: dayKey(6), to: dayKey(0) }
+    case 'month':
+      return { from: dayKey(29), to: dayKey(0) }
+  }
+}
+
+export function currentPreset(f: Pick<Filters, 'from' | 'to'>): DatePreset {
+  if (!f.from && !f.to) return 'all'
+  for (const p of ['today', 'yesterday', 'week', 'month'] as const) {
+    const r = presetRange(p)
+    if (f.from === r.from && f.to === r.to) return p
+  }
+  return 'custom'
 }

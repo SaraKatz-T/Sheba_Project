@@ -57,8 +57,19 @@ export function KanbanBoard({ forms, visibleStatuses, duplicates, onShowColumn }
                 {items.slice(0, CARDS_PER_COLUMN).map((f) => (
                   <li key={f.id}>
                     <Link className="board-card" to={formLink(f)}>
-                      <span className="board-card-name">{f.person_name ?? <span className="muted">טרם חולץ</span>}</span>
-                      {f.id_number && <span className="ltr num muted board-card-id">{f.id_number}</span>}
+                      <span className="board-card-key">
+                        {f.commitment_number ? (
+                          <span className="ltr num">{f.commitment_number}</span>
+                        ) : (
+                          <span className="muted">{f.status === 'failed' ? 'לא נקרא' : 'טרם חולץ'}</span>
+                        )}
+                      </span>
+                      {f.person_name && (
+                        <span className="board-card-name">
+                          {f.person_name}
+                          {f.id_number && <span className="ltr num muted board-card-id">{f.id_number}</span>}
+                        </span>
+                      )}
                       <span className="board-card-meta num">
                         {f.source === 'phone' && <Smartphone size={13} aria-label="צולם בטלפון" />}
                         {formatDateTime(f.received_at)}

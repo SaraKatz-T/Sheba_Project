@@ -1,5 +1,6 @@
-import { Inbox, Radio, WifiOff } from 'lucide-react'
+import { CircleCheck, Inbox, Radio, WifiOff } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router'
 import { useLiveStatus } from '../api/liveStatus'
 import { useForms, useUploads } from '../api/queries'
 import type { UploadStatus } from '../api/types'
@@ -32,7 +33,8 @@ export function IntakePage() {
     [local, uploads.data, forms.data],
   )
   const active = views.filter((v) => !v.view.finished)
-  const finished = views.filter((v) => v.view.finished)
+  // Files sent from this screen in this session that have finished.
+  const doneHere = views.filter((v) => v.view.finished && v.row.local).length
   const etas = active.map((v) => v.view.etaAt).filter((e): e is string => !!e)
   const now = useNow(1000, etas.length > 0)
   const overallEta = etas.length ? etas.reduce((a, b) => (a > b ? a : b)) : null
@@ -164,25 +166,22 @@ export function IntakePage() {
         </section>
       )}
 
-      {finished.length > 0 && (
-        <section className="queue fade-up" aria-labelledby="queue-done">
-          <header className="queue-head">
-            <h2 id="queue-done">הסתיימו ב-24 השעות האחרונות</h2>
-            <span className="queue-summary">{plural(finished.length, 'קובץ אחד', 'קבצים')}</span>
-          </header>
-          <ul className="up-list">
-            {finished.map(({ row, view }) => (
-              <UploadRow key={row.key} row={row} view={view} now={now} />
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {views.length === 0 && !uploads.isPending && (
-        <p className="queue-empty">
-          <Inbox size={18} aria-hidden="true" />
-          עוד לא נקלטו קבצים היום.
+      {/* Finished files are records now; this screen only points there. */}
+      {doneHere > 0 ? (
+        <p className="queue-done">
+          <CircleCheck size={18} aria-hidden="true" />
+          {doneHere === 1 ? 'קובץ אחד הסתיים' : `${formatNumber(doneHere)} קבצים הסתיימו`} ונמצא{doneHere === 1 ? '' : 'ים'} עכשיו
+          ברשומות.
+          <Link to="/">לרשומות</Link>
         </p>
+      ) : (
+        active.length === 0 &&
+        !uploads.isPending && (
+          <p className="queue-empty">
+            <Inbox size={18} aria-hidden="true" />
+            אין קבצים בטיפול כרגע. טפסים שכבר נקלטו נמצאים <Link to="/">ברשומות</Link>.
+          </p>
+        )
       )}
     </>
   )

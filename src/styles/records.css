@@ -38,29 +38,31 @@
 
 /* Toolbar */
 
+/* One row: search, then the two filter menus, the yellow switch and "clear". */
 .toolbar {
-  display: grid;
-  gap: var(--s-4);
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3) var(--s-4);
   margin-bottom: var(--s-5);
-  padding: var(--s-5);
+  padding: var(--s-4);
   background: var(--surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
 }
 
-.toolbar-row {
+.toolbar-filters {
   display: flex;
-  align-items: center;
-  gap: var(--s-4) var(--s-6);
-}
-
-.toolbar-row-wrap {
   flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
 }
 
 .search {
   position: relative;
-  flex: 1;
+  flex: 1 1 320px;
   min-width: 0;
 }
 
@@ -139,47 +141,131 @@
   box-shadow: var(--focus);
 }
 
-.filter-group {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--s-2);
+/* Filter menus */
+
+.popover {
+  position: relative;
 }
 
-.filter-label {
-  margin-inline-end: var(--s-1);
-  color: var(--ink-500);
-  font-size: var(--text-sm);
-}
-
-.filter-chip {
+.filter-button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 34px;
-  padding: 0 var(--s-3);
+  min-height: 44px;
+  padding: 0 var(--s-3) 0 var(--s-4);
   border: 1px solid var(--line-strong);
   border-radius: var(--pill);
   background: var(--surface);
-  color: var(--ink-700);
-  font-size: var(--text-sm);
-  font-weight: 500;
+  color: var(--ink-900);
+  font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
   transition:
     background-color var(--fast) var(--ease),
-    border-color var(--fast) var(--ease),
-    color var(--fast) var(--ease);
+    border-color var(--fast) var(--ease);
 }
 
-.filter-chip:hover {
+.filter-button:hover {
   border-color: var(--brand-500);
+}
+
+.filter-button-name {
+  color: var(--ink-500);
+  font-weight: 400;
+}
+
+.filter-button.is-active {
+  border-color: var(--brand-600);
+  background: var(--brand-50);
   color: var(--brand-600);
 }
 
-.filter-chip[aria-pressed='true'] {
-  border-color: var(--brand-600);
-  background: var(--brand-600);
-  color: #fff;
+.filter-chevron {
+  color: var(--ink-500);
+  transition: rotate var(--fast) var(--ease);
+}
+
+.filter-button[aria-expanded='true'] .filter-chevron {
+  rotate: 180deg;
+}
+
+.popover-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  inset-inline-start: 0;
+  z-index: 10;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  padding: var(--s-2);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  animation: fade-up var(--fast) var(--ease) both;
+}
+
+.pop-options {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.pop-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.pop-option:hover {
+  background: var(--brand-50);
+}
+
+.pop-option input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand-600);
+}
+
+.pop-option-text {
+  display: grid;
+}
+
+.pop-option-label {
+  font-weight: 600;
+}
+
+.pop-option-hint {
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+}
+
+.pop-range {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+  margin: var(--s-1) var(--s-3) var(--s-2);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--line);
+  font-size: var(--text-sm);
+}
+
+.pop-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-2);
+  margin-top: var(--s-2);
+  padding: var(--s-2) var(--s-2) 0;
+  border-top: 1px solid var(--line);
+}
+
+.pop-foot .btn-primary:only-child {
+  margin-inline-start: auto;
 }
 
 .filter-count {
@@ -194,32 +280,12 @@
   text-align: center;
 }
 
-.filter-chip[aria-pressed='true'] .filter-count {
-  background: rgb(255 255 255 / 0.2);
-  color: #fff;
-}
-
-.date-range {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--s-2);
-  min-width: 0;
-}
-
 .date-input {
-  flex: 1 1 140px;
   min-width: 0;
-  width: auto;
-  min-height: 34px;
+  min-height: 38px;
   padding: 0 var(--s-3);
-  border-radius: var(--pill);
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
-}
-
-.clear-filters {
-  margin-inline-start: auto;
 }
 
 .records-loading {
@@ -300,22 +366,26 @@ th[aria-sort] .th-sort {
   border-bottom: 0;
 }
 
-.cell-name {
+.cell-key {
   display: flex;
   align-items: center;
   gap: var(--s-2);
 }
 
-.cell-name a {
-  color: var(--ink-900);
-  font-weight: 600;
+.cell-key a {
+  color: var(--brand-600);
+  font-weight: 700;
   font-size: var(--text-md);
   text-decoration: none;
 }
 
-.cell-name a:hover {
-  color: var(--brand-600);
+.cell-key a:hover {
   text-decoration: underline;
+}
+
+.cell-name {
+  color: var(--ink-900);
+  font-weight: 500;
 }
 
 .chip-button {
@@ -438,13 +508,19 @@ th[aria-sort] .th-sort {
   translate: 0 -1px;
 }
 
-.board-card-name {
-  font-weight: 600;
+.board-card-key {
+  color: var(--brand-600);
+  font-weight: 700;
 }
 
-.board-card-id {
-  justify-self: start;
+.board-card-name {
   font-size: var(--text-sm);
+}
+
+/* The ID is an LTR isolate; the gap goes on the name side. */
+.board-card-id {
+  margin-inline-start: var(--s-2);
+  font-size: var(--text-xs);
 }
 
 .board-card-meta {
@@ -777,14 +853,8 @@ th[aria-sort] .th-sort {
 }
 
 @media (max-width: 860px) {
-  .toolbar-row {
-    flex-wrap: wrap;
-  }
   .search {
     flex-basis: 100%;
-  }
-  .clear-filters {
-    margin-inline-start: 0;
   }
   .page-head .segmented {
     width: 100%;

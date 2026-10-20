@@ -100,10 +100,10 @@ function FormLine({ form, index, compact }: { form: FormSummary; index: number; 
         </span>
       )}
       <span className="up-form-person">
-        {form.person_name ? (
+        {form.commitment_number || form.person_name ? (
           <>
-            <strong>{form.person_name}</strong>
-            {form.id_number && <span className="ltr muted">{form.id_number}</span>}
+            {form.commitment_number && <strong className="ltr num">{form.commitment_number}</strong>}
+            {form.person_name && <span className="muted">{form.person_name}</span>}
           </>
         ) : (
           <span className="muted">—</span>

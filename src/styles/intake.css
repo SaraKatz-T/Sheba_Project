@@ -136,13 +136,29 @@
   }
 }
 
-.queue-empty {
+.queue-empty,
+.queue-done {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: var(--s-2);
+  gap: 6px;
   margin-top: var(--s-6);
   color: var(--ink-500);
+}
+
+.queue-done {
+  color: var(--ink-700);
+}
+
+.queue-done svg {
+  color: var(--teal-ink);
+}
+
+.queue-done a,
+.queue-empty a {
+  color: var(--brand-600);
+  font-weight: 600;
 }
 
 .up-list {
@@ -342,9 +358,14 @@
   white-space: nowrap;
 }
 
-/* The ID is an LTR isolate, so the gap goes on the (RTL) name before it. */
+.up-form-person {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s-2);
+}
+
 .up-form-person strong {
-  margin-inline-end: var(--s-2);
+  color: var(--brand-600);
 }
 
 .form-progress {

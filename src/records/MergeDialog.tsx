@@ -110,7 +110,15 @@ export function MergeDialog({ group, onClose, onMerged }: Props) {
     <dialog ref={ref} className="dialog" aria-labelledby={titleId} onClose={onClose}>
       <header className="dialog-head">
         <h2 id={titleId}>
-          מיזוג טפסים של {name} <span className="ltr num muted">{group.idNumber}</span>
+          {group.kind === 'form' ? (
+            <>
+              מיזוג התחייבות <span className="ltr num">{group.value}</span> <span className="muted">{name}</span>
+            </>
+          ) : (
+            <>
+              מיזוג טפסים של {name} <span className="ltr num muted">{group.value}</span>
+            </>
+          )}
         </h2>
         <button type="button" className="icon-btn" onClick={() => ref.current?.close()} aria-label="סגירה">
           <X size={20} />

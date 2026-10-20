@@ -109,6 +109,7 @@ function recount(form: StoredForm) {
   form.uncertain_count = form.fields.filter((f) => f.uncertain).length
   form.corrected_count = form.fields.filter((f) => f.corrected).length
   const get = (key: string) => form.fields.find((f) => f.key === key)?.value || null
+  form.commitment_number = get('commitment_number')
   form.person_name = get('full_name')
   form.id_number = get('id_number')
   const date = get('form_date')
@@ -242,6 +243,7 @@ function newForm(upload: StoredUpload, pageNumbers: number[], seed: number): Sto
     received_at: upload.received_at,
     updated_at: nowIso(),
     reviewed_at: null,
+    commitment_number: null,
     person_name: null,
     id_number: null,
     form_date: null,
@@ -415,16 +417,20 @@ interface SeedSpec {
   corrected?: number
   reviewMinutes?: number
   source?: FormSource
+  /** Different form, same patient ID: a likely misread ID. */
   sameIdAs?: number
+  /** The same paper form captured again (same commitment number, same patient). */
+  sameFormAs?: number
   /** Seeds with the same batch share one multi-form PDF upload. */
   batch?: string
   file?: string
 }
 
 const SEEDS: SeedSpec[] = [
+  { daysAgo: 0, hour: 10, status: 'pending_review', uncertain: 1, source: 'phone', sameFormAs: 5 },
   { daysAgo: 0, hour: 9, status: 'pending_review', uncertain: 3 },
   { daysAgo: 0, hour: 9, status: 'pending_review', uncertain: 0, source: 'phone' },
-  { daysAgo: 0, hour: 8, status: 'pending_review', uncertain: 1, sameIdAs: 6, batch: 'סריקת_בוקר.pdf' },
+  { daysAgo: 0, hour: 8, status: 'pending_review', uncertain: 1, sameIdAs: 7, batch: 'סריקת_בוקר.pdf' },
   { daysAgo: 0, hour: 8, status: 'approved', reviewMinutes: 6, batch: 'סריקת_בוקר.pdf' },
   { daysAgo: 1, hour: 14, status: 'pending_review', uncertain: 2 },
   { daysAgo: 1, hour: 12, status: 'failed', file: 'סריקה_מטושטשת.pdf' },
@@ -484,7 +490,12 @@ function seed() {
     upload.form_ids.push(form.id)
     upload.form_count = upload.form_ids.length
 
-    const person = spec.sameIdAs !== undefined ? { ...people[i], id: people[spec.sameIdAs].id } : people[i]
+    const person =
+      spec.sameFormAs !== undefined
+        ? people[spec.sameFormAs]
+        : spec.sameIdAs !== undefined
+          ? { ...people[i], id: people[spec.sameIdAs].id }
+          : people[i]
     const flags = spec.uncertain
       ? randomFlags(rng, spec.uncertain)
       : Object.fromEntries(
@@ -502,7 +513,12 @@ function seed() {
     if (spec.status === 'failed') {
       form.error = 'העמוד חתוך או מטושטש מדי לקריאה.'
     } else {
-      form.fields = buildFields(rng, person, israeliDate(new Date(upload.received_at)), flags, true)
+      // A form captured twice carries the date written on the original paper.
+      const written =
+        spec.sameFormAs !== undefined
+          ? new Date(now - SEEDS[spec.sameFormAs].daysAgo * DAY_MS)
+          : new Date(upload.received_at)
+      form.fields = buildFields(rng, person, israeliDate(written), flags, true)
     }
 
     // Approved/rejected seeds: resolve their flags, keeping a correction where requested.

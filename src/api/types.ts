@@ -72,6 +72,8 @@ export interface FormSummary {
   received_at: string
   updated_at: string
   reviewed_at: string | null
+  /** The form's own identifier, shown first everywhere. */
+  commitment_number: string | null
   person_name: string | null
   id_number: string | null
   form_date: string | null

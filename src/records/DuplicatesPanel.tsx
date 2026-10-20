@@ -50,9 +50,18 @@ function CancelButton({ form, onAnnounce }: { form: FormSummary; onAnnounce: (m:
   )
 }
 
+function bannerTitle(groups: DuplicateGroup[]) {
+  const forms = groups.filter((g) => g.kind === 'form').length
+  const people = groups.length - forms
+  const parts = [
+    forms && (forms === 1 ? 'טופס אחד נקלט יותר מפעם אחת' : `${formatNumber(forms)} טפסים נקלטו יותר מפעם אחת`),
+    people && (people === 1 ? 'ת"ז אחת מופיעה בכמה טפסים' : `${formatNumber(people)} מספרי ת"ז מופיעים בכמה טפסים`),
+  ].filter(Boolean)
+  return parts.join(' · ')
+}
+
 export function DuplicatesPanel({ groups, open, onToggle, onMerge, onAnnounce }: Props) {
   if (groups.length === 0) return null
-  const total = groups.reduce((n, g) => n + g.forms.length, 0)
 
   return (
     <section className={`dups${open ? ' is-open' : ''}`} aria-labelledby="dups-title">
@@ -61,9 +70,7 @@ export function DuplicatesPanel({ groups, open, onToggle, onMerge, onAnnounce }:
           <Copy size={18} />
         </span>
         <span id="dups-title" className="dups-title">
-          {groups.length === 1
-            ? `ת"ז אחת מופיעה ב-${formatNumber(total)} טפסים`
-            : `${formatNumber(groups.length)} מספרי ת"ז מופיעים ביותר מטופס אחד`}
+          {bannerTitle(groups)}
         </span>
         <span className="dups-sub">אפשר למזג לטופס אחד, לבטל את הכפול, או להשאיר את כולם</span>
         <ChevronDown size={20} className="dups-chevron" aria-hidden="true" />
@@ -76,11 +83,23 @@ export function DuplicatesPanel({ groups, open, onToggle, onMerge, onAnnounce }:
             return (
               <li key={g.key} className="dup-group">
                 <header className="dup-head">
-                  <strong>{name}</strong>
-                  <span className="ltr num muted">{g.idNumber}</span>
-                  <span className={g.sameFormDate ? 'chip chip-pending' : 'chip chip-muted'}>
-                    {g.sameFormDate ? 'אותו תאריך טופס: כנראה אותו טופס פעמיים' : 'תאריכי טופס שונים: ייתכן שאלה טפסים שונים'}
-                  </span>
+                  {g.kind === 'form' ? (
+                    <>
+                      <strong>
+                        התחייבות <span className="ltr num">{g.value}</span>
+                      </strong>
+                      <span className="muted">{name}</span>
+                      <span className="chip chip-pending">אותו טופס נקלט {g.forms.length === 2 ? 'פעמיים' : `${g.forms.length} פעמים`}</span>
+                    </>
+                  ) : (
+                    <>
+                      <strong>{name}</strong>
+                      <span className="muted">
+                        ת"ז <span className="ltr num">{g.value}</span>
+                      </span>
+                      <span className="chip chip-muted">מספרי התחייבות שונים: ייתכן שאלה טפסים שונים של אותו מטופל</span>
+                    </>
+                  )}
                   <span className="dup-actions">
                     <button type="button" className="btn btn-sm btn-primary" onClick={() => onMerge(g)}>
                       <Merge size={15} aria-hidden="true" />
@@ -104,7 +123,15 @@ export function DuplicatesPanel({ groups, open, onToggle, onMerge, onAnnounce }:
                       <Link to={formLink(f)} className="num">
                         התקבל {formatDateTime(f.received_at)}
                       </Link>
-                      <span className="muted num">טופס מ-{f.form_date ? formatDate(f.form_date) : '—'}</span>
+                      <span className="muted num">
+                        {g.kind === 'person' && f.commitment_number ? (
+                          <>
+                            התחייבות <span className="ltr">{f.commitment_number}</span>
+                          </>
+                        ) : (
+                          <>טופס מ-{f.form_date ? formatDate(f.form_date) : '—'}</>
+                        )}
+                      </span>
                       <span className="muted dup-file" title={f.file_name}>
                         {f.file_name}
                       </span>
