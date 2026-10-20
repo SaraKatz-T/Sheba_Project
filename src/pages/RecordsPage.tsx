@@ -11,6 +11,7 @@ import { duplicateIndex, findDuplicates, type DuplicateGroup } from '../records/
 import { applyFilters, hasActiveFilters, readFilters, sortForms, writeFilters, type Filters, type SortKey } from '../records/filters'
 import { KanbanBoard } from '../records/KanbanBoard'
 import { MergeDialog } from '../records/MergeDialog'
+import { Overview } from '../records/Overview'
 import { RecordDetail } from '../records/RecordDetail'
 import { RecordsTable } from '../records/RecordsTable'
 import { RecordsToolbar } from '../records/RecordsToolbar'
@@ -125,6 +126,15 @@ export function RecordsPage() {
       <p className="visually-hidden" aria-live="polite">
         {announcement}
       </p>
+
+      {all.length > 0 && (
+        <Overview
+          forms={all}
+          selectedDay={filters.from && filters.from === filters.to ? filters.from : null}
+          onSelectDay={(day) => update({ from: day, to: day, view: 'table' })}
+          onStartReview={startReview}
+        />
+      )}
 
       {dupsOpen && (
         <DuplicatesPanel

@@ -9,6 +9,7 @@ import './styles/intake.css'
 import './styles/records.css'
 import './styles/capture.css'
 import './styles/review.css'
+import './styles/overview.css'
 
 async function start() {
   if (import.meta.env.VITE_USE_MOCK === 'true') {
