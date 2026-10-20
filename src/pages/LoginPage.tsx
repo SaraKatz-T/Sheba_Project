@@ -60,7 +60,7 @@ export function LoginPage() {
       <main className="login-main">
         <div className="login-hero fade-up">
           <h1 className="hero-title">
-            קליטת טפסי התחייבות
+            ניהול טפסי התחייבות
             <span className="hero-accent">המעבדה המרכזית לנגיפים</span>
           </h1>
           <p className="hero-lead">טפסים סרוקים, מצולמים ובכתב יד נקלטים, מחולצים ונבדקים במקום אחד.</p>

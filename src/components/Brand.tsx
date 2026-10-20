@@ -18,7 +18,7 @@ export function Brand() {
       <Logo className="brand-logo" />
       {logoUrl && <span className="brand-divider" aria-hidden="true" />}
       <div className="brand-text">
-        <span className="brand-title">קליטת טפסי התחייבות</span>
+        <span className="brand-title">ניהול טפסי התחייבות</span>
         <span className="brand-sub">המעבדה המרכזית לנגיפים</span>
       </div>
     </div>

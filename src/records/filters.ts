@@ -66,7 +66,7 @@ export function writeFilters(f: Filters): URLSearchParams {
 }
 
 /** Link that opens one record in place in the records table. */
-export const recordLink = (formId: string) => `/?open=${encodeURIComponent(formId)}`
+export const recordLink = (formId: string) => `/records?open=${encodeURIComponent(formId)}`
 
 export const hasActiveFilters = (f: Filters) =>
   !!f.q.trim() || f.statuses.length > 0 || !!f.from || !!f.to || f.yellow

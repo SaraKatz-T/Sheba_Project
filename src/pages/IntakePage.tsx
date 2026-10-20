@@ -176,14 +176,14 @@ export function IntakePage() {
           <CircleCheck size={18} aria-hidden="true" />
           {doneHere === 1 ? 'קובץ אחד הסתיים' : `${formatNumber(doneHere)} קבצים הסתיימו`} ונמצא{doneHere === 1 ? '' : 'ים'} עכשיו
           ברשומות.
-          <Link to="/">לרשומות</Link>
+          <Link to="/records">לרשומות</Link>
         </p>
       ) : (
         active.length === 0 &&
         !uploads.isPending && (
           <p className="queue-empty">
             <Inbox size={18} aria-hidden="true" />
-            אין קבצים בטיפול כרגע. טפסים שכבר נקלטו נמצאים <Link to="/">ברשומות</Link>.
+            אין קבצים בטיפול כרגע. טפסים שכבר נקלטו נמצאים <Link to="/records">ברשומות</Link>.
           </p>
         )
       )}

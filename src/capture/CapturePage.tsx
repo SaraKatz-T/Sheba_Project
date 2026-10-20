@@ -295,7 +295,7 @@ export function CapturePage() {
     <div className="capture">
       <header className="cap-top">
         <Logo className="cap-logo" />
-        <span className="cap-product">קליטת טפסי התחייבות</span>
+        <span className="cap-product">ניהול טפסי התחייבות</span>
       </header>
       <main className="cap-main">{body}</main>
       {sentCount > 0 && (
