@@ -204,6 +204,75 @@
   animation: fade-up var(--fast) var(--ease) both;
 }
 
+.popover-panel.is-end {
+  inset-inline-start: auto;
+  inset-inline-end: 0;
+}
+
+/* Export */
+
+.export-button {
+  min-height: 40px;
+  gap: var(--s-2);
+}
+
+.export-panel {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.export-scope {
+  padding: var(--s-2) var(--s-3);
+  color: var(--ink-500);
+  font-size: var(--text-sm);
+}
+
+.export-option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--ink-900);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.export-option:hover:not(:disabled) {
+  background: var(--brand-50);
+}
+
+.export-option:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.export-option svg {
+  color: var(--brand-600);
+}
+
+.export-option > span {
+  display: grid;
+}
+
+.export-option .muted {
+  font-size: var(--text-xs);
+}
+
+.export-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  color: var(--brand-600);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
 .pop-options {
   display: grid;
   margin: 0;

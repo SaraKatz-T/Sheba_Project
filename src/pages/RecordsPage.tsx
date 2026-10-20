@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router'
 import { useForms } from '../api/queries'
 import type { FormStatus } from '../api/types'
 import { EmptyState } from '../components/EmptyState'
+import { ExportMenu } from '../export/ExportMenu'
 import { formatNumber } from '../lib/format'
 import { DuplicatesPanel } from '../records/DuplicatesPanel'
 import { duplicateIndex, findDuplicates, useDismissedDuplicates, type DuplicateGroup } from '../records/duplicates'
@@ -102,6 +103,10 @@ export function RecordsPage() {
             ממתינים לבדיקה
             {pendingCount > 0 && <span className="badge">{formatNumber(pendingCount)}</span>}
           </button>
+          <ExportMenu
+            forms={filters.view === 'board' ? sortForms(applyFilters(all, filters), filters.sort, filters.dir) : visible}
+            onDone={(text) => setToast({ text, n: Date.now() })}
+          />
           <div className="segmented" role="group" aria-label="תצוגה">
             <button type="button" aria-pressed={filters.view === 'table'} onClick={() => update({ view: 'table' })}>
               <Table2 size={16} aria-hidden="true" />

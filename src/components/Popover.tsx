@@ -8,11 +8,14 @@ interface Props {
   active?: boolean
   /** Accessible name of the panel. */
   title: string
+  /** 'end' opens the panel toward the start side, for buttons near the left edge. */
+  align?: 'start' | 'end'
+  className?: string
   children: (close: () => void) => ReactNode
 }
 
 /** A button that opens a small panel below it. Closes on Escape, outside click, or focus leaving. */
-export function Popover({ label, active, title, children }: Props) {
+export function Popover({ label, active, title, align = 'start', className, children }: Props) {
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -55,7 +58,7 @@ export function Popover({ label, active, title, children }: Props) {
       <button
         ref={buttonRef}
         type="button"
-        className={`filter-button${active ? ' is-active' : ''}`}
+        className={`filter-button${active ? ' is-active' : ''}${className ? ` ${className}` : ''}`}
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen((o) => !o)}
@@ -64,7 +67,13 @@ export function Popover({ label, active, title, children }: Props) {
         <ChevronDown size={16} className="filter-chevron" aria-hidden="true" />
       </button>
       {open && (
-        <div id={panelId} ref={panelRef} className="popover-panel" role="dialog" aria-label={title}>
+        <div
+          id={panelId}
+          ref={panelRef}
+          className={`popover-panel${align === 'end' ? ' is-end' : ''}`}
+          role="dialog"
+          aria-label={title}
+        >
           {children(close)}
         </div>
       )}
