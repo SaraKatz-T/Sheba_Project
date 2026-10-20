@@ -209,6 +209,23 @@ export const handlers = [
     return HttpResponse.json(db.summary(target))
   }),
 
+  // Duplicate decisions
+
+  http.get('/api/duplicate-dismissals', async () => {
+    if (!isAuthed()) return unauthorized()
+    await latency()
+    return HttpResponse.json({ items: db.listDismissals() })
+  }),
+
+  http.post('/api/duplicate-dismissals', async ({ request }) => {
+    if (!isAuthed()) return unauthorized()
+    await latency()
+    const body = (await request.json().catch(() => null)) as { form_ids?: unknown } | null
+    const ids = Array.isArray(body?.form_ids) ? body.form_ids.map(String) : []
+    const dismissal = db.addDismissal(ids)
+    return dismissal ? HttpResponse.json(dismissal, { status: 201 }) : error(400, 'bad_request', 'צריך לפחות שני טפסים קיימים.')
+  }),
+
   // Phone capture
 
   http.post('/api/capture-sessions', async () => {

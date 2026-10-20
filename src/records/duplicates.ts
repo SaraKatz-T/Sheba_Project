@@ -3,7 +3,8 @@
 // - 'form':   the same commitment number twice — the same paper captured again.
 // - 'person': the same ID number on forms with different commitment numbers —
 //             either two real forms of one patient, or a misread ID.
-import { useSyncExternalStore } from 'react'
+// Groups the user chose to keep ("keep them all") are stored on the server.
+import { groupKey } from '../api/queries'
 import type { FormSummary } from '../api/types'
 
 export type DuplicateKind = 'form' | 'person'
@@ -18,32 +19,6 @@ export interface DuplicateGroup {
 
 const digitsOnly = (v: string) => v.replace(/\D/g, '').replace(/^0+/, '')
 
-// Groups the user marked as "keep both", for this session only.
-let dismissed = new Set<string>()
-const listeners = new Set<() => void>()
-
-export function dismissGroup(key: string) {
-  dismissed = new Set(dismissed).add(key)
-  listeners.forEach((l) => l())
-}
-
-export function resetDismissedDuplicates() {
-  dismissed = new Set()
-  listeners.forEach((l) => l())
-}
-
-export function useDismissedDuplicates(): Set<string> {
-  return useSyncExternalStore(
-    (l) => {
-      listeners.add(l)
-      return () => {
-        listeners.delete(l)
-      }
-    },
-    () => dismissed,
-  )
-}
-
 function groupBy(forms: FormSummary[], pick: (f: FormSummary) => string | null) {
   const map = new Map<string, FormSummary[]>()
   for (const f of forms) {
@@ -54,13 +29,11 @@ function groupBy(forms: FormSummary[], pick: (f: FormSummary) => string | null) 
   return [...map].filter(([, group]) => group.length > 1)
 }
 
-const idsKey = (forms: FormSummary[]) =>
-  forms
-    .map((f) => f.id)
-    .sort()
-    .join('+')
-
-export function findDuplicates(forms: FormSummary[], skip: Set<string>): DuplicateGroup[] {
+/**
+ * @param dismissed group keys (see groupKey) the user chose to keep; a group that later
+ * gains another form has a different key and shows again.
+ */
+export function findDuplicates(forms: FormSummary[], dismissed: Set<string>): DuplicateGroup[] {
   const live = forms.filter((f) => f.status !== 'rejected')
   const groups: DuplicateGroup[] = []
   const seen = new Set<string>()
@@ -70,15 +43,12 @@ export function findDuplicates(forms: FormSummary[], skip: Set<string>): Duplica
     ['person', (f: FormSummary) => f.id_number],
   ] as const) {
     for (const [value, group] of groupBy(live, pick)) {
-      const ids = idsKey(group)
+      const ids = groupKey(group.map((f) => f.id))
       // The same forms grouped by commitment number need not show again by ID.
-      if (seen.has(ids)) continue
+      if (seen.has(ids) || dismissed.has(ids)) continue
       seen.add(ids)
-      // The key changes when a new form joins, so a dismissed group comes back if it grows.
-      const key = `${kind}:${ids}`
-      if (skip.has(key)) continue
       groups.push({
-        key,
+        key: `${kind}:${ids}`,
         kind,
         value,
         forms: [...group].sort((a, b) => a.received_at.localeCompare(b.received_at)),

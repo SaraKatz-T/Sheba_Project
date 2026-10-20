@@ -6,6 +6,20 @@ import type { FormSummary } from '../api/types'
 const NIQQUD = /[֑-ׇ]/g
 const FINALS: Record<string, string> = { ך: 'כ', ם: 'מ', ן: 'נ', ף: 'פ', ץ: 'צ' }
 
+// The Hebrew letter on each key of the standard Israeli keyboard, for text typed while
+// the keyboard was left in English ("kuh" was meant to be "לוי").
+const HEBREW_ON_KEY: Record<string, string> = {
+  e: 'ק', r: 'ר', t: 'א', y: 'ט', u: 'ו', i: 'ן', o: 'ם', p: 'פ',
+  a: 'ש', s: 'ד', d: 'ג', f: 'כ', g: 'ע', h: 'י', j: 'ח', k: 'ל', l: 'ך', ';': 'ף',
+  z: 'ז', x: 'ס', c: 'ב', v: 'ה', b: 'נ', n: 'מ', m: 'צ', ',': 'ת', '.': 'ץ',
+}
+
+/** What the text would have been with the keyboard in Hebrew; null if it has no Latin letters. */
+export function fromEnglishLayout(text: string): string | null {
+  if (!/[a-z]/i.test(text)) return null
+  return [...text.toLowerCase()].map((ch) => HEBREW_ON_KEY[ch] ?? ch).join('')
+}
+
 /** Lowercase, no niqqud, regular letters instead of final ones, single spaces. */
 export function normalizeHebrew(text: string): string {
   return text
@@ -138,8 +152,13 @@ export function buildMatcher(raw: string): Matcher | null {
 
   const query = normalizeHebrew(trimmed)
   if (!query) return null
+  const switched = fromEnglishLayout(trimmed)
+  const asHebrew = switched ? normalizeHebrew(switched) : null
   return {
     kind: 'text',
-    test: (f) => textMatches(query, f.person_name ?? '') || normalizeHebrew(f.file_name).includes(query),
+    test: (f) =>
+      textMatches(query, f.person_name ?? '') ||
+      (!!asHebrew && textMatches(asHebrew, f.person_name ?? '')) ||
+      normalizeHebrew(f.file_name).includes(query),
   }
 }

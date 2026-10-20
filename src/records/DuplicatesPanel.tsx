@@ -1,20 +1,29 @@
 import { useMutation } from '@tanstack/react-query'
-import { ChevronDown, Copy, Merge } from 'lucide-react'
+import { Copy, Merge, X } from 'lucide-react'
 import { useState } from 'react'
-import { rejectForm } from '../api/endpoints'
-import { keys, queryClient } from '../api/queries'
+import { createDismissal, rejectForm } from '../api/endpoints'
+import { addDismissal, keys, queryClient } from '../api/queries'
 import type { FormSummary } from '../api/types'
 import { StatusChip } from '../components/StatusChip'
 import { formatDate, formatDateTime, formatNumber } from '../lib/format'
-import { dismissGroup, type DuplicateGroup } from './duplicates'
+import type { DuplicateGroup } from './duplicates'
 
-interface Props {
-  groups: DuplicateGroup[]
-  open: boolean
-  onToggle: () => void
-  onMerge: (group: DuplicateGroup) => void
-  onAnnounce: (message: string) => void
-  onOpen: (id: string) => void
+/** The page-head button: duplicates are flagged, but the list opens only on request. */
+export function DuplicatesButton({ count, open, onToggle }: { count: number; open: boolean; onToggle: () => void }) {
+  if (count === 0) return null
+  return (
+    <button
+      type="button"
+      className={`btn btn-outline btn-dups${open ? ' is-open' : ''}`}
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-controls="dups-panel"
+    >
+      <Copy size={17} aria-hidden="true" />
+      כפילויות
+      <span className="badge">{formatNumber(count)}</span>
+    </button>
+  )
 }
 
 function CancelButton({ form, onAnnounce }: { form: FormSummary; onAnnounce: (m: string) => void }) {
@@ -49,34 +58,51 @@ function CancelButton({ form, onAnnounce }: { form: FormSummary; onAnnounce: (m:
   )
 }
 
-function bannerTitle(groups: DuplicateGroup[]) {
-  const forms = groups.filter((g) => g.kind === 'form').length
-  const people = groups.length - forms
-  const parts = [
-    forms && (forms === 1 ? 'טופס אחד נקלט יותר מפעם אחת' : `${formatNumber(forms)} טפסים נקלטו יותר מפעם אחת`),
-    people && (people === 1 ? 'ת"ז אחת מופיעה בכמה טפסים' : `${formatNumber(people)} מספרי ת"ז מופיעים בכמה טפסים`),
-  ].filter(Boolean)
-  return parts.join(' · ')
+function KeepAllButton({ group, onAnnounce }: { group: DuplicateGroup; onAnnounce: (m: string) => void }) {
+  const keep = useMutation({
+    mutationFn: () => createDismissal(group.forms.map((f) => f.id)),
+    onSuccess: (dismissal) => {
+      addDismissal(dismissal)
+      onAnnounce('הטפסים נשארו כמו שהם.')
+    },
+  })
+  return (
+    <button type="button" className="btn btn-sm btn-outline" onClick={() => keep.mutate()} disabled={keep.isPending}>
+      להשאיר את כולם
+    </button>
+  )
 }
 
-export function DuplicatesPanel({ groups, open, onToggle, onMerge, onAnnounce, onOpen }: Props) {
-  if (groups.length === 0) return null
+interface Props {
+  groups: DuplicateGroup[]
+  onClose: () => void
+  onMerge: (group: DuplicateGroup) => void
+  onAnnounce: (message: string) => void
+  onOpen: (id: string) => void
+}
 
+export function DuplicatesPanel({ groups, onClose, onMerge, onAnnounce, onOpen }: Props) {
   return (
-    <section className={`dups${open ? ' is-open' : ''}`} aria-labelledby="dups-title">
-      <button type="button" className="dups-banner" onClick={onToggle} aria-expanded={open} aria-controls="dups-list">
+    <section id="dups-panel" className="dups fade-up" aria-labelledby="dups-title">
+      <header className="dups-head">
         <span className="dups-icon" aria-hidden="true">
           <Copy size={18} />
         </span>
-        <span id="dups-title" className="dups-title">
-          {bannerTitle(groups)}
-        </span>
-        <span className="dups-sub">אפשר למזג לטופס אחד, לבטל את הכפול, או להשאיר את כולם</span>
-        <ChevronDown size={20} className="dups-chevron" aria-hidden="true" />
-      </button>
+        <div>
+          <h2 id="dups-title">כפילויות</h2>
+          <p>
+            {groups.length === 0
+              ? 'אין כפילויות פתוחות.'
+              : 'אפשר למזג לטופס אחד, לבטל את הכפול, או להשאיר את כולם. ההחלטה נשמרת לכולם.'}
+          </p>
+        </div>
+        <button type="button" className="icon-btn dups-close" onClick={onClose} aria-label="סגירת רשימת הכפילויות">
+          <X size={18} />
+        </button>
+      </header>
 
-      {open && (
-        <ul id="dups-list" className="dups-list">
+      {groups.length > 0 && (
+        <ul className="dups-list">
           {groups.map((g) => {
             const name = g.forms.find((f) => f.person_name)?.person_name
             return (
@@ -88,7 +114,9 @@ export function DuplicatesPanel({ groups, open, onToggle, onMerge, onAnnounce, o
                         התחייבות <span className="ltr num">{g.value}</span>
                       </strong>
                       <span className="muted">{name}</span>
-                      <span className="chip chip-pending">אותו טופס נקלט {g.forms.length === 2 ? 'פעמיים' : `${g.forms.length} פעמים`}</span>
+                      <span className="chip chip-pending">
+                        אותו טופס נקלט {g.forms.length === 2 ? 'פעמיים' : `${g.forms.length} פעמים`}
+                      </span>
                     </>
                   ) : (
                     <>
@@ -96,7 +124,7 @@ export function DuplicatesPanel({ groups, open, onToggle, onMerge, onAnnounce, o
                       <span className="muted">
                         ת"ז <span className="ltr num">{g.value}</span>
                       </span>
-                      <span className="chip chip-muted">מספרי התחייבות שונים: ייתכן שאלה טפסים שונים של אותו מטופל</span>
+                      <span className="chip chip-muted">אותו מטופל, מספרי התחייבות שונים</span>
                     </>
                   )}
                   <span className="dup-actions">
@@ -104,16 +132,7 @@ export function DuplicatesPanel({ groups, open, onToggle, onMerge, onAnnounce, o
                       <Merge size={15} aria-hidden="true" />
                       מיזוג…
                     </button>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline"
-                      onClick={() => {
-                        dismissGroup(g.key)
-                        onAnnounce('הטפסים נשארו כמו שהם.')
-                      }}
-                    >
-                      להשאיר את כולם
-                    </button>
+                    <KeepAllButton group={g} onAnnounce={onAnnounce} />
                   </span>
                 </header>
                 <ul className="dup-forms">

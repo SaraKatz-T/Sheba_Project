@@ -2,7 +2,7 @@
 // replaces its copy. After each (re)connect the lists are reloaded, so messages missed
 // while disconnected do not matter; while disconnected the queries fall back to polling.
 import { API_BASE } from './client'
-import { keys, queryClient, upsertForm, upsertUpload } from './queries'
+import { addDismissal, keys, queryClient, upsertForm, upsertUpload } from './queries'
 import { setLiveStatus } from './liveStatus'
 import type { LiveEvent } from './types'
 
@@ -16,11 +16,13 @@ let retryTimer: ReturnType<typeof setTimeout> | undefined
 function resync() {
   void queryClient.invalidateQueries({ queryKey: keys.uploads })
   void queryClient.invalidateQueries({ queryKey: keys.forms })
+  void queryClient.invalidateQueries({ queryKey: keys.dismissals })
 }
 
 function apply(event: LiveEvent) {
   if (event.type === 'upload.updated') upsertUpload(event.upload)
   else if (event.type === 'form.updated') upsertForm(event.form)
+  else if (event.type === 'duplicate_dismissal.created') addDismissal(event.dismissal)
 }
 
 function connect() {

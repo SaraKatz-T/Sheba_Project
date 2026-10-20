@@ -1,14 +1,35 @@
 import { MutationCache, QueryCache, QueryClient, useQuery } from '@tanstack/react-query'
 import { ApiError } from './client'
-import { getSession, listForms, listUploads } from './endpoints'
+import { getSession, listDismissals, listForms, listUploads } from './endpoints'
 import { getLiveStatus } from './liveStatus'
-import type { FormList, FormSummary, Upload, UploadList } from './types'
+import type { DuplicateDismissal, FormList, FormSummary, Upload, UploadList } from './types'
 
 export const keys = {
   session: ['session'] as const,
   uploads: ['uploads'] as const,
   forms: ['forms'] as const,
   form: (id: string) => ['forms', id] as const,
+  dismissals: ['duplicate-dismissals'] as const,
+}
+
+/** The identity of a group of forms, whatever order the ids come in. */
+export const groupKey = (formIds: string[]) => [...new Set(formIds)].sort().join('+')
+
+export function useDismissals() {
+  return useQuery({
+    queryKey: keys.dismissals,
+    queryFn: listDismissals,
+    select: (data) => new Set(data.items.map((d) => groupKey(d.form_ids))),
+    refetchInterval: () => (getLiveStatus() === 'open' ? SAFETY_POLL_MS : IDLE_POLL_MS),
+  })
+}
+
+export function addDismissal(dismissal: DuplicateDismissal) {
+  queryClient.setQueryData<{ items: DuplicateDismissal[] }>(keys.dismissals, (old) => {
+    if (!old) return old
+    const key = groupKey(dismissal.form_ids)
+    return old.items.some((d) => groupKey(d.form_ids) === key) ? old : { items: [...old.items, dismissal] }
+  })
 }
 
 // While the live connection is down, poll instead: fast while work is in flight,

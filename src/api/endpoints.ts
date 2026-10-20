@@ -2,6 +2,7 @@ import { API_BASE, ApiError, errorFromResponse, json, messageForStatus, request 
 import type {
   CaptureSession,
   CaptureUploadResult,
+  DuplicateDismissal,
   Field,
   FieldValueSource,
   FormDetail,
@@ -56,6 +57,13 @@ export const retryForm = (id: string) =>
 
 export const mergeForm = (id: string, into: string, values: Record<string, string>) =>
   request<FormSummary>(`/forms/${enc(id)}/merge`, { method: 'POST', ...json({ into, values }) })
+
+// Duplicate decisions
+
+export const listDismissals = () => request<{ items: DuplicateDismissal[] }>('/duplicate-dismissals')
+
+export const createDismissal = (formIds: string[]) =>
+  request<DuplicateDismissal>('/duplicate-dismissals', { method: 'POST', ...json({ form_ids: formIds }) })
 
 /** Fetches an API image (page, thumbnail) into memory only; the caller must revoke the URL. */
 export async function fetchImage(imageUrl: string, signal?: AbortSignal): Promise<string> {

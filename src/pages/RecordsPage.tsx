@@ -1,13 +1,13 @@
 import { CircleAlert, CircleCheck, ClipboardCheck, Columns3, Inbox, LoaderCircle, RefreshCw, SearchX, Table2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { useForms } from '../api/queries'
+import { useDismissals, useForms } from '../api/queries'
 import type { FormStatus } from '../api/types'
 import { EmptyState } from '../components/EmptyState'
 import { ExportMenu } from '../export/ExportMenu'
 import { formatNumber } from '../lib/format'
-import { DuplicatesPanel } from '../records/DuplicatesPanel'
-import { duplicateIndex, findDuplicates, useDismissedDuplicates, type DuplicateGroup } from '../records/duplicates'
+import { DuplicatesButton, DuplicatesPanel } from '../records/DuplicatesPanel'
+import { duplicateIndex, findDuplicates, type DuplicateGroup } from '../records/duplicates'
 import { applyFilters, hasActiveFilters, readFilters, sortForms, writeFilters, type Filters, type SortKey } from '../records/filters'
 import { KanbanBoard } from '../records/KanbanBoard'
 import { MergeDialog } from '../records/MergeDialog'
@@ -20,7 +20,8 @@ export function RecordsPage() {
   const filters = useMemo(() => readFilters(params), [params])
   const forms = useForms()
   const all = useMemo(() => forms.data?.items ?? [], [forms.data])
-  const dismissed = useDismissedDuplicates()
+  const dismissals = useDismissals()
+  const dismissed = useMemo(() => dismissals.data ?? new Set<string>(), [dismissals.data])
   const [dupsOpen, setDupsOpen] = useState(false)
   const [merging, setMerging] = useState<DuplicateGroup | null>(null)
   const [announcement, setAnnouncement] = useState('')
@@ -81,7 +82,7 @@ export function RecordsPage() {
 
   const showDuplicates = () => {
     setDupsOpen(true)
-    document.getElementById('dups-title')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    requestAnimationFrame(() => document.getElementById('dups-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   }
 
   const subtitle = forms.isPending
@@ -98,6 +99,7 @@ export function RecordsPage() {
           <p aria-live="polite">{subtitle}</p>
         </div>
         <div className="page-head-actions">
+          <DuplicatesButton count={groups.length} open={dupsOpen} onToggle={() => setDupsOpen((o) => !o)} />
           <button type="button" className="btn btn-primary" onClick={startReview} disabled={pendingCount === 0}>
             <ClipboardCheck size={18} aria-hidden="true" />
             ממתינים לבדיקה
@@ -124,14 +126,15 @@ export function RecordsPage() {
         {announcement}
       </p>
 
-      <DuplicatesPanel
-        groups={groups}
-        open={dupsOpen}
-        onToggle={() => setDupsOpen((o) => !o)}
-        onMerge={setMerging}
-        onAnnounce={setAnnouncement}
-        onOpen={(id) => update({ view: 'table', open: id })}
-      />
+      {dupsOpen && (
+        <DuplicatesPanel
+          groups={groups}
+          onClose={() => setDupsOpen(false)}
+          onMerge={setMerging}
+          onAnnounce={setAnnouncement}
+          onOpen={(id) => update({ view: 'table', open: id })}
+        />
+      )}
 
       <RecordsToolbar filters={filters} counts={counts} onChange={update} />
 

@@ -1,6 +1,7 @@
 // In-memory stand-in for the Python server: database, queue, workers and live events.
 // Resets on page reload.
 import type {
+  DuplicateDismissal,
   Field,
   FieldValueSource,
   FormDetail,
@@ -61,6 +62,25 @@ function emitForm(form: StoredForm) {
   form.updated_at = nowIso()
   const event: LiveEvent = { type: 'form.updated', form: summary(form) }
   listeners.forEach((l) => l(event))
+}
+
+// Duplicate groups the user chose to keep.
+
+const dismissals: DuplicateDismissal[] = []
+
+export const listDismissals = () => dismissals.map((d) => ({ ...d, form_ids: [...d.form_ids] }))
+
+/** Stores the group (ids sorted, no repeats) once; returns null if an id is unknown. */
+export function addDismissal(formIds: string[]): DuplicateDismissal | null {
+  const ids = [...new Set(formIds)].sort()
+  if (ids.length < 2 || ids.some((id) => !forms.has(id))) return null
+  const existing = dismissals.find((d) => d.form_ids.join('+') === ids.join('+'))
+  if (existing) return existing
+  const dismissal = { form_ids: ids, dismissed_at: nowIso() }
+  dismissals.push(dismissal)
+  const event: LiveEvent = { type: 'duplicate_dismissal.created', dismissal }
+  listeners.forEach((l) => l(event))
+  return dismissal
 }
 
 // Views

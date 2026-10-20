@@ -141,10 +141,17 @@ export interface CaptureUploadResult {
   status: UploadStatus
 }
 
+/** "These forms are fine as they are": a duplicate group the user chose to keep. */
+export interface DuplicateDismissal {
+  form_ids: string[]
+  dismissed_at: string
+}
+
 /** Messages pushed by the server on the /api/live WebSocket. */
 export type LiveEvent =
   | { type: 'upload.updated'; upload: Upload }
   | { type: 'form.updated'; form: FormSummary }
+  | { type: 'duplicate_dismissal.created'; dismissal: DuplicateDismissal }
 
 export interface ExistingUpload {
   id: string
