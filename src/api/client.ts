@@ -1,4 +1,4 @@
-import type { ApiErrorBody } from './types'
+import type { ApiErrorBody, ExistingUpload } from './types'
 
 export const API_BASE = '/api'
 
@@ -23,14 +23,14 @@ const NOT_THE_API_MESSAGE = 'השרת לא מכיר את הבקשה הזו. כד
 export class ApiError extends Error {
   readonly status: number
   readonly code: string
-  readonly existingId?: string
+  readonly existingUpload?: ExistingUpload
 
-  constructor(status: number, code: string, message: string, existingId?: string) {
+  constructor(status: number, code: string, message: string, existingUpload?: ExistingUpload) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.code = code
-    this.existingId = existingId
+    this.existingUpload = existingUpload
   }
 }
 
@@ -51,7 +51,7 @@ export async function errorFromResponse(res: Response): Promise<ApiError> {
     res.status,
     err?.code ?? `http_${res.status}`,
     err?.message || fallback,
-    err?.existing_id,
+    err?.existing_upload,
   )
 }
 

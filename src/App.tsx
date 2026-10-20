@@ -5,8 +5,9 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { queryClient, useSession } from './api/queries'
 import { AppShell } from './components/AppShell'
 import { EmptyState } from './components/EmptyState'
+import { IntakePage } from './pages/IntakePage'
 import { LoginPage } from './pages/LoginPage'
-import { IntakePage, RecordsPage, ReviewPage } from './pages/Placeholders'
+import { RecordsPage, ReviewPage } from './pages/Placeholders'
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const session = useSession()

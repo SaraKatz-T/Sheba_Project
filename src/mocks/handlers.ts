@@ -1,5 +1,5 @@
 // Implements docs/api-contract.md against the in-memory db.
-import { HttpResponse, delay, http } from 'msw'
+import { HttpResponse, delay, http, ws } from 'msw'
 import type { FieldValueSource, FormSource } from '../api/types'
 import * as db from './db'
 
@@ -22,16 +22,31 @@ const latency = () => delay(120 + Math.random() * 180)
 
 const captureSessions = new Map<string, number>()
 
-function validateFile(file: FormDataEntryValue | null) {
-  if (!(file instanceof File)) return error(400, 'missing_file', 'לא נשלח קובץ.')
-  if (file.size > MAX_BYTES) return error(413, 'too_large', 'הקובץ גדול מ-25MB.')
+async function readUpload(request: Request) {
+  const data = await request.formData()
+  const file = data.get('file')
+  if (!(file instanceof File)) return { response: error(400, 'missing_file', 'לא נשלח קובץ.') }
+  if (file.size === 0) return { response: error(400, 'empty_file', 'הקובץ ריק.') }
+  if (file.size > MAX_BYTES) return { response: error(413, 'too_large', 'הקובץ גדול מ-25MB.') }
   if (!ACCEPTED.test(file.type) && !ACCEPTED_EXT.test(file.name)) {
-    return error(415, 'unsupported_type', 'אפשר להעלות PDF או תמונה (JPG, PNG, TIFF, HEIC, WEBP).')
+    return {
+      response: error(415, 'unsupported_type', 'אפשר להעלות PDF או תמונה (JPG, PNG, TIFF, HEIC, WEBP).'),
+    }
   }
-  return null
+  const sha = String(data.get('sha256') ?? '')
+  if (!/^[0-9a-f]{64}$/.test(sha)) return { response: error(400, 'bad_sha256') }
+  return { file, sha, data }
 }
 
+// Live updates. Pushes every db change to all connected tabs.
+const live = ws.link(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/api/live`)
+db.subscribe((event) => live.broadcast(JSON.stringify(event)))
+
 export const handlers = [
+  live.addEventListener('connection', ({ client }) => {
+    if (!isAuthed()) client.close(4401, 'unauthorized')
+  }),
+
   // Auth
 
   http.post('/api/auth/login', async ({ request }) => {
@@ -44,6 +59,7 @@ export const handlers = [
 
   http.post('/api/auth/logout', async () => {
     document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0; SameSite=Strict`
+    live.clients.forEach((c) => c.close(4401, 'logged out'))
     return new HttpResponse(null, { status: 204 })
   }),
 
@@ -52,29 +68,53 @@ export const handlers = [
     return isAuthed() ? HttpResponse.json({ authenticated: true }) : unauthorized()
   }),
 
+  // Uploads
+
+  http.get('/api/uploads', async () => {
+    if (!isAuthed()) return unauthorized()
+    await latency()
+    return HttpResponse.json({ items: db.listUploads().map(db.uploadView) })
+  }),
+
+  http.post('/api/uploads', async ({ request }) => {
+    if (!isAuthed()) return unauthorized()
+    const parsed = await readUpload(request)
+    if (parsed.response) return parsed.response
+    const { file, sha, data } = parsed
+    const existing = db.findUploadBySha(sha)
+    if (existing && data.get('force') !== 'true') {
+      return error(409, 'duplicate_file', 'הקובץ הזה כבר נקלט.', {
+        existing_upload: { id: existing.id, file_name: existing.file_name, received_at: existing.received_at },
+      })
+    }
+    const source = (data.get('source') === 'demo' ? 'demo' : 'upload') as FormSource
+    const upload = await db.createUpload(file, sha, source)
+    return HttpResponse.json(db.uploadView(upload), { status: 202 })
+  }),
+
+  http.get('/api/uploads/:id', async ({ params }) => {
+    if (!isAuthed()) return unauthorized()
+    await latency()
+    const upload = db.getUpload(String(params.id))
+    return upload ? HttpResponse.json(db.uploadView(upload)) : notFound()
+  }),
+
+  http.post('/api/uploads/:id/retry', async ({ params }) => {
+    if (!isAuthed()) return unauthorized()
+    await latency()
+    const upload = db.getUpload(String(params.id))
+    if (!upload) return notFound()
+    if (upload.status !== 'failed') return error(409, 'not_failed')
+    db.retryUpload(upload)
+    return HttpResponse.json(db.uploadView(upload), { status: 202 })
+  }),
+
   // Forms
 
   http.get('/api/forms', async () => {
     if (!isAuthed()) return unauthorized()
     await latency()
     return HttpResponse.json({ items: db.listForms().map(db.summary) })
-  }),
-
-  http.post('/api/forms', async ({ request }) => {
-    if (!isAuthed()) return unauthorized()
-    const data = await request.formData()
-    const file = data.get('file')
-    const invalid = validateFile(file)
-    if (invalid) return invalid
-    const sha = String(data.get('sha256') ?? '')
-    if (!/^[0-9a-f]{64}$/.test(sha)) return error(400, 'bad_sha256')
-    const existing = db.findBySha(sha)
-    if (existing && data.get('force') !== 'true') {
-      return error(409, 'duplicate_file', 'הקובץ הזה כבר נקלט.', { existing_id: existing.id })
-    }
-    const source = (data.get('source') === 'demo' ? 'demo' : 'upload') as FormSource
-    const form = await db.createForm(file as File, sha, source)
-    return HttpResponse.json(db.summary(form), { status: 201 })
   }),
 
   http.get('/api/forms/:id', async ({ params }) => {
@@ -87,9 +127,9 @@ export const handlers = [
   http.get('/api/forms/:id/pages/:number/image', async ({ params }) => {
     if (!isAuthed()) return unauthorized()
     const form = db.getForm(String(params.id))
-    if (!form || params.number !== '1') return notFound()
+    const blob = form ? db.pageImage(form, Number(params.number)) : null
+    if (!blob) return notFound()
     await latency()
-    const blob = db.pageImage(form)
     return new HttpResponse(blob, {
       headers: { 'Content-Type': blob.type, 'Cache-Control': 'no-store' },
     })
@@ -138,7 +178,7 @@ export const handlers = [
     const form = db.getForm(String(params.id))
     if (!form) return notFound()
     if (form.status !== 'failed') return error(409, 'not_failed')
-    db.retry(form)
+    db.retryForm(form)
     return HttpResponse.json(db.summary(form))
   }),
 
@@ -181,17 +221,13 @@ export const handlers = [
     return HttpResponse.json({ expires_at: new Date(expires).toISOString() })
   }),
 
-  http.post('/api/capture/:token/forms', async ({ params, request }) => {
+  http.post('/api/capture/:token/uploads', async ({ params, request }) => {
     const expires = captureSessions.get(String(params.token))
     if (expires === undefined) return notFound()
     if (expires < Date.now()) return error(410, 'expired')
-    const data = await request.formData()
-    const file = data.get('file')
-    const invalid = validateFile(file)
-    if (invalid) return invalid
-    const sha = String(data.get('sha256') ?? '')
-    if (!/^[0-9a-f]{64}$/.test(sha)) return error(400, 'bad_sha256')
-    const form = await db.createForm(file as File, sha, 'phone')
-    return HttpResponse.json({ id: form.id, status: form.status }, { status: 201 })
+    const parsed = await readUpload(request)
+    if (parsed.response) return parsed.response
+    const upload = await db.createUpload(parsed.file, parsed.sha, 'phone')
+    return HttpResponse.json({ id: upload.id, status: upload.status }, { status: 202 })
   }),
 ]

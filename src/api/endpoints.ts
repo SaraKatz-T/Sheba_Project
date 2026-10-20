@@ -9,6 +9,8 @@ import type {
   FormSource,
   FormSummary,
   Session,
+  Upload,
+  UploadList,
 } from './types'
 
 const enc = encodeURIComponent
@@ -21,6 +23,15 @@ export const login = (password: string) =>
 export const logout = () => request<void>('/auth/logout', { method: 'POST' })
 
 export const getSession = () => request<Session>('/auth/session')
+
+// Uploads
+
+export const listUploads = () => request<UploadList>('/uploads')
+
+export const getUpload = (id: string) => request<Upload>(`/uploads/${enc(id)}`)
+
+export const retryUpload = (id: string) =>
+  request<Upload>(`/uploads/${enc(id)}/retry`, { method: 'POST' })
 
 // Forms
 
@@ -100,9 +111,9 @@ function upload<T>(path: string, parts: Record<string, string | Blob>, opts: Upl
   })
 }
 
-export const uploadForm = (opts: UploadOptions) =>
-  upload<FormSummary>(
-    '/forms',
+export const createUpload = (opts: UploadOptions) =>
+  upload<Upload>(
+    '/uploads',
     {
       file: opts.file,
       sha256: opts.sha256,
@@ -122,7 +133,7 @@ export const checkCaptureSession = (token: string) =>
 
 export const uploadCapture = (token: string, opts: UploadOptions) =>
   upload<CaptureUploadResult>(
-    `/capture/${enc(token)}/forms`,
+    `/capture/${enc(token)}/uploads`,
     { file: opts.file, sha256: opts.sha256 },
     opts,
   )

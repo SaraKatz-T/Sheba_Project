@@ -10,6 +10,8 @@ export type FormStatus =
 
 export type FormSource = 'upload' | 'phone' | 'demo'
 
+export type UploadStatus = 'queued' | 'splitting' | 'processing' | 'done' | 'failed'
+
 export type FieldType =
   | 'text'
   | 'id_number'
@@ -34,11 +36,37 @@ export interface Progress {
   step: string
 }
 
-export interface FormSummary {
+/** A file as sent by the client; the server splits it into one or more forms. */
+export interface Upload {
   id: string
   file_name: string
   file_type: string
+  file_size: number
   file_sha256: string
+  source: FormSource
+  status: UploadStatus
+  received_at: string
+  updated_at: string
+  page_count: number | null
+  form_count: number | null
+  form_ids: string[]
+  /** Only while queued; 1 = next in line. */
+  queue_position: number | null
+  /** Estimated completion of the whole file. */
+  eta_at: string | null
+  error: string | null
+}
+
+export interface UploadList {
+  items: Upload[]
+}
+
+export interface FormSummary {
+  id: string
+  upload_id: string
+  /** Pages of the original file that belong to this form, starting at 1. */
+  upload_pages: number[]
+  file_name: string
   source: FormSource
   status: FormStatus
   received_at: string
@@ -106,13 +134,24 @@ export interface CaptureSession {
 
 export interface CaptureUploadResult {
   id: string
-  status: FormStatus
+  status: UploadStatus
+}
+
+/** Messages pushed by the server on the /api/live WebSocket. */
+export type LiveEvent =
+  | { type: 'upload.updated'; upload: Upload }
+  | { type: 'form.updated'; form: FormSummary }
+
+export interface ExistingUpload {
+  id: string
+  file_name: string
+  received_at: string
 }
 
 export interface ApiErrorBody {
   error: {
     code: string
     message?: string
-    existing_id?: string
+    existing_upload?: ExistingUpload
   }
 }

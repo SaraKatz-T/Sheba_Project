@@ -129,6 +129,10 @@
   font-variant-numeric: tabular-nums;
 }
 
+.badge-busy {
+  background: var(--brand-600);
+}
+
 .topbar-end {
   display: flex;
   align-items: center;

@@ -9,9 +9,9 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     server: {
       port: 5173,
-      // In development every /api request is forwarded to the Python server,
-      // so the browser sees a single origin and the session cookie just works.
-      proxy: apiUrl ? { '/api': { target: apiUrl, changeOrigin: true } } : undefined,
+      // In development every /api request (including the /api/live WebSocket) is forwarded
+      // to the Python server, so the browser sees a single origin and the cookie just works.
+      proxy: apiUrl ? { '/api': { target: apiUrl, changeOrigin: true, ws: true } } : undefined,
     },
   }
 })

@@ -1,5 +1,5 @@
 // Temporary screens for stage 0; each is replaced by its real screen in a later stage.
-import { ClipboardCheck, LoaderCircle, Table2, Upload } from 'lucide-react'
+import { ClipboardCheck, LoaderCircle, Table2 } from 'lucide-react'
 import type { FormStatus } from '../api/types'
 import { useForms } from '../api/queries'
 import { EmptyState } from '../components/EmptyState'
@@ -36,21 +36,6 @@ export function RecordsPage() {
       </div>
       <EmptyState icon={<Table2 size={26} />} title="טבלת הרשומות תיבנה בשלב 2">
         החיבור לשרת עובד. כאן תופיע הטבלה עם חיפוש, סינון ותצוגת קנבן.
-      </EmptyState>
-    </>
-  )
-}
-
-export function IntakePage() {
-  return (
-    <>
-      <div className="page-head">
-        <div>
-          <h1>קליטה</h1>
-        </div>
-      </div>
-      <EmptyState icon={<Upload size={26} />} title="מסך הקליטה ייבנה בשלב 1">
-        כאן גוררים טפסים: PDF, סריקות, צילומים וצילומי מסך, כמה יחד.
       </EmptyState>
     </>
   )

@@ -8,6 +8,16 @@ const esc = (s: string) =>
 const PRINT_FONT = "'Segoe UI', Arial, sans-serif"
 const HAND_FONT = "'Segoe Print', 'Comic Sans MS', 'Segoe UI', cursive"
 
+/** Pages after the first: a plain continuation sheet. */
+export function renderContinuationSvg(page: number): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE_W}" height="${PAGE_H}" viewBox="0 0 ${PAGE_W} ${PAGE_H}">
+  <rect width="100%" height="100%" fill="#fbfaf6"/>
+  <rect x="60" y="60" width="${PAGE_W - 120}" height="${PAGE_H - 120}" fill="none" stroke="#bbb" stroke-width="2"/>
+  <text x="${PAGE_W / 2}" y="190" font-family="${PRINT_FONT}" font-size="36" font-weight="700" fill="#222" text-anchor="middle" direction="rtl">נספח לטופס · עמוד ${page}</text>
+  <text x="${PAGE_W / 2}" y="245" font-family="${PRINT_FONT}" font-size="24" fill="#666" text-anchor="middle" direction="rtl">טופס לדוגמה · כל הנתונים מדומים</text>
+</svg>`
+}
+
 export function renderFormSvg(fields: Field[], seed: number): string {
   const rows = fields
     .map((f) => {
