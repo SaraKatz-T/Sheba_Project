@@ -8,8 +8,8 @@ import { AppShell } from './components/AppShell'
 import { EmptyState } from './components/EmptyState'
 import { IntakePage } from './pages/IntakePage'
 import { LoginPage } from './pages/LoginPage'
-import { ReviewPage } from './pages/Placeholders'
 import { RecordsPage } from './pages/RecordsPage'
+import { ReviewPage } from './pages/ReviewPage'
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const session = useSession()
