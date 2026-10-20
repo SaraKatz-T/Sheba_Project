@@ -9,7 +9,6 @@ import { EmptyState } from './components/EmptyState'
 import { IntakePage } from './pages/IntakePage'
 import { LoginPage } from './pages/LoginPage'
 import { RecordsPage } from './pages/RecordsPage'
-import { ReviewPage } from './pages/ReviewPage'
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const session = useSession()
@@ -50,6 +49,12 @@ function RequireAuth({ children }: { children: ReactNode }) {
   return children
 }
 
+function ReviewRedirect() {
+  const { search } = useLocation()
+  const form = new URLSearchParams(search).get('form')
+  return <Navigate to={form ? `/?open=${encodeURIComponent(form)}` : '/?status=pending_review'} replace />
+}
+
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -68,7 +73,8 @@ export function App() {
           >
             <Route index element={<RecordsPage />} />
             <Route path="intake" element={<IntakePage />} />
-            <Route path="review" element={<ReviewPage />} />
+            {/* Review happens inside the records now; old links still land on the right record. */}
+            <Route path="review" element={<ReviewRedirect />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -31,6 +31,21 @@ export class PageImageCache {
     this.urls = []
     this.pending.clear()
   }
+
+  /** Back in use after a dispose (React may unmount and remount the same component). */
+  revive() {
+    this.disposed = false
+  }
+}
+
+/** One cache per mounted component, released on unmount and safe under StrictMode's double effects. */
+export function usePageImageCache(): PageImageCache {
+  const [cache] = useState(() => new PageImageCache())
+  useEffect(() => {
+    cache.revive()
+    return () => cache.dispose()
+  }, [cache])
+  return cache
 }
 
 export type ImageState = { status: 'loading' } | { status: 'ready'; src: string } | { status: 'error' }

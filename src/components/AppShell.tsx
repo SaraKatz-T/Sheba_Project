@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import { ClipboardCheck, FlaskConical, LoaderCircle, LogOut, Table2, Upload } from 'lucide-react'
+import { FlaskConical, LoaderCircle, LogOut, Table2, Upload } from 'lucide-react'
 import { useEffect } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router'
 import { logout } from '../api/endpoints'
@@ -70,6 +70,11 @@ export function AppShell() {
             <NavLink to="/" end className="nav-link">
               <Table2 size={18} aria-hidden="true" />
               רשומות
+              {pending > 0 && (
+                <span className="badge" aria-label={`${pending} ממתינים לבדיקה`}>
+                  {formatNumber(pending)}
+                </span>
+              )}
             </NavLink>
             <NavLink to="/intake" className="nav-link">
               {intakeBusy > 0 ? (
@@ -81,15 +86,6 @@ export function AppShell() {
               {intakeBusy > 0 && (
                 <span className="badge badge-busy" aria-label={`${intakeBusy} קבצים בטיפול`}>
                   {formatNumber(intakeBusy)}
-                </span>
-              )}
-            </NavLink>
-            <NavLink to="/review" className="nav-link">
-              <ClipboardCheck size={18} aria-hidden="true" />
-              בדיקה
-              {pending > 0 && (
-                <span className="badge" aria-label={`${pending} ממתינים לבדיקה`}>
-                  {formatNumber(pending)}
                 </span>
               )}
             </NavLink>

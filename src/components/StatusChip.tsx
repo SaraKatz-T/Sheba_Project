@@ -1,5 +1,5 @@
 import type { FormStatus } from '../api/types'
-import { STATUS_LABELS } from '../lib/format'
+import { STATUS_LABELS, formatNumber } from '../lib/format'
 
 const TONE: Record<FormStatus, string> = {
   received: 'chip-info',
@@ -14,7 +14,13 @@ export function StatusChip({ status }: { status: FormStatus }) {
   return <span className={`chip ${TONE[status]}`}>{STATUS_LABELS[status]}</span>
 }
 
+/** How many fields still need a look: just the number, in amber. */
 export function YellowChip({ count }: { count: number }) {
   if (count <= 0) return null
-  return <span className="chip chip-flag">{count === 1 ? 'שדה אחד לבדיקה' : `${count} שדות לבדיקה`}</span>
+  const label = count === 1 ? 'שדה אחד לבדיקה' : `${count} שדות לבדיקה`
+  return (
+    <span className="chip chip-flag chip-count" title={label} aria-label={label}>
+      {formatNumber(count)}
+    </span>
+  )
 }

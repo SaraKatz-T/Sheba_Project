@@ -1,5 +1,5 @@
-import { CircleAlert, Columns3, Inbox, LoaderCircle, RefreshCw, SearchX, Table2 } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { CircleAlert, CircleCheck, ClipboardCheck, Columns3, Inbox, LoaderCircle, RefreshCw, SearchX, Table2 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useForms } from '../api/queries'
 import type { FormStatus } from '../api/types'
@@ -10,6 +10,7 @@ import { duplicateIndex, findDuplicates, useDismissedDuplicates, type DuplicateG
 import { applyFilters, hasActiveFilters, readFilters, sortForms, writeFilters, type Filters, type SortKey } from '../records/filters'
 import { KanbanBoard } from '../records/KanbanBoard'
 import { MergeDialog } from '../records/MergeDialog'
+import { RecordDetail } from '../records/RecordDetail'
 import { RecordsTable } from '../records/RecordsTable'
 import { RecordsToolbar } from '../records/RecordsToolbar'
 
@@ -45,6 +46,31 @@ export function RecordsPage() {
     return sortForms(byStatus, filters.sort, filters.dir)
   }, [beforeStatus, filters.statuses, filters.sort, filters.dir])
 
+  const pendingCount = useMemo(() => all.filter((f) => f.status === 'pending_review').length, [all])
+
+  // After approving or rejecting, the next waiting record in the table opens by itself.
+  const nextPending = (afterId: string) => {
+    const i = visible.findIndex((f) => f.id === afterId)
+    const isNext = (f: (typeof visible)[number]) => f.status === 'pending_review' && f.id !== afterId
+    return (visible.slice(i + 1).find(isNext) ?? visible.slice(0, Math.max(0, i)).find(isNext))?.id ?? null
+  }
+
+  const [toast, setToast] = useState<{ text: string; n: number } | null>(null)
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 2600)
+    return () => clearTimeout(t)
+  }, [toast])
+
+  const startReview = () => {
+    const waiting = sortForms(
+      all.filter((f) => f.status === 'pending_review'),
+      filters.sort,
+      filters.dir,
+    )
+    update({ statuses: ['pending_review'], view: 'table', open: waiting[0]?.id ?? null })
+  }
+
   const onSort = (key: SortKey) =>
     update(
       key === filters.sort
@@ -70,15 +96,22 @@ export function RecordsPage() {
           <h1>רשומות</h1>
           <p aria-live="polite">{subtitle}</p>
         </div>
-        <div className="segmented" role="group" aria-label="תצוגה">
-          <button type="button" aria-pressed={filters.view === 'table'} onClick={() => update({ view: 'table' })}>
-            <Table2 size={16} aria-hidden="true" />
-            טבלה
+        <div className="page-head-actions">
+          <button type="button" className="btn btn-primary" onClick={startReview} disabled={pendingCount === 0}>
+            <ClipboardCheck size={18} aria-hidden="true" />
+            ממתינים לבדיקה
+            {pendingCount > 0 && <span className="badge">{formatNumber(pendingCount)}</span>}
           </button>
-          <button type="button" aria-pressed={filters.view === 'board'} onClick={() => update({ view: 'board' })}>
-            <Columns3 size={16} aria-hidden="true" />
-            לוח סטטוסים
-          </button>
+          <div className="segmented" role="group" aria-label="תצוגה">
+            <button type="button" aria-pressed={filters.view === 'table'} onClick={() => update({ view: 'table' })}>
+              <Table2 size={16} aria-hidden="true" />
+              טבלה
+            </button>
+            <button type="button" aria-pressed={filters.view === 'board'} onClick={() => update({ view: 'board' })}>
+              <Columns3 size={16} aria-hidden="true" />
+              לוח סטטוסים
+            </button>
+          </div>
         </div>
       </div>
 
@@ -92,6 +125,7 @@ export function RecordsPage() {
         onToggle={() => setDupsOpen((o) => !o)}
         onMerge={setMerging}
         onAnnounce={setAnnouncement}
+        onOpen={(id) => update({ view: 'table', open: id })}
       />
 
       <RecordsToolbar filters={filters} counts={counts} onChange={update} />
@@ -129,7 +163,11 @@ export function RecordsPage() {
       ) : visible.length === 0 && filters.view === 'table' ? (
         <EmptyState
           icon={<SearchX size={26} />}
-          title="לא נמצאו טפסים שמתאימים לסינון"
+          title={
+            filters.statuses.length === 1 && filters.statuses[0] === 'pending_review'
+              ? 'אין טפסים ממתינים 🎉'
+              : 'לא נמצאו טפסים שמתאימים לסינון'
+          }
           action={
             <button
               type="button"
@@ -148,6 +186,7 @@ export function RecordsPage() {
           visibleStatuses={filters.statuses}
           duplicates={dupIndex}
           onShowColumn={(statuses) => update({ view: 'table', statuses })}
+          onOpen={(id) => update({ view: 'table', open: id })}
         />
       ) : (
         <RecordsTable
@@ -157,8 +196,31 @@ export function RecordsPage() {
           onSort={onSort}
           duplicates={dupIndex}
           onShowDuplicates={showDuplicates}
+          openId={filters.open}
+          onToggle={(id) => update({ open: filters.open === id ? null : id })}
+          renderDetail={(id) => (
+            <RecordDetail
+              key={id}
+              id={id}
+              nextPending={nextPending}
+              onDone={(next, message) => {
+                setToast({ text: next ? message : `${message} · אין עוד טפסים ממתינים 🎉`, n: Date.now() })
+                update({ open: next })
+              }}
+              onClose={() => update({ open: null })}
+            />
+          )}
         />
       )}
+
+      <p className="toast" role="status" aria-live="polite" key={toast?.n}>
+        {toast && (
+          <>
+            <CircleCheck size={18} aria-hidden="true" />
+            {toast.text}
+          </>
+        )}
+      </p>
 
       {merging && (
         <MergeDialog

@@ -16,7 +16,9 @@ import { retryForm, retryUpload } from '../api/endpoints'
 import { upsertForm, upsertUpload } from '../api/queries'
 import type { FormSummary } from '../api/types'
 import { formatBytes } from '../lib/files'
+import { YellowChip } from '../components/StatusChip'
 import { formatEta, formatPages } from '../lib/format'
+import { recordLink } from '../records/filters'
 import { useAuthedImage } from '../lib/useAuthedImage'
 import { formPercent, type Row, type RowView, type Tone } from './rows'
 import { removeItem, retryItem, sendAnyway } from './uploadQueue'
@@ -73,13 +75,7 @@ function FormState({ form }: { form: FormSummary }) {
         </span>
       )
     case 'pending_review':
-      return form.uncertain_count > 0 ? (
-        <span className="chip chip-flag">
-          {form.uncertain_count === 1 ? 'שדה אחד לבדיקה' : `${form.uncertain_count} שדות לבדיקה`}
-        </span>
-      ) : (
-        <span className="chip chip-ok">בלי שדות צהובים</span>
-      )
+      return form.uncertain_count > 0 ? <YellowChip count={form.uncertain_count} /> : <span className="chip chip-ok">מוכן</span>
     case 'approved':
       return <span className="chip chip-ok">אושר</span>
     case 'rejected':
@@ -117,7 +113,7 @@ function FormLine({ form, index, compact }: { form: FormSummary; index: number; 
       <FormState form={form} />
       <span className="up-form-action">
         {form.status === 'pending_review' && (
-          <Link className="btn btn-sm btn-soft" to={`/review?form=${encodeURIComponent(form.id)}`}>
+          <Link className="btn btn-sm btn-soft" to={recordLink(form.id)}>
             לבדיקה
           </Link>
         )}

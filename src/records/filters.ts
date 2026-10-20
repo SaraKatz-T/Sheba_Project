@@ -24,6 +24,8 @@ export interface Filters {
   view: View
   sort: SortKey
   dir: 'asc' | 'desc'
+  /** The record opened in place in the table. */
+  open: string | null
 }
 
 const SORT_KEYS: SortKey[] = ['commitment', 'name', 'id', 'form_date', 'received', 'status', 'uncertain']
@@ -45,6 +47,7 @@ export function readFilters(params: URLSearchParams): Filters {
     view: params.get('view') === 'board' ? 'board' : 'table',
     sort: sort && SORT_KEYS.includes(sort) ? sort : 'received',
     dir: params.get('dir') === 'asc' ? 'asc' : 'desc',
+    open: params.get('open') || null,
   }
 }
 
@@ -58,8 +61,12 @@ export function writeFilters(f: Filters): URLSearchParams {
   if (f.view === 'board') p.set('view', 'board')
   if (f.sort !== 'received') p.set('sort', f.sort)
   if (f.dir !== 'desc') p.set('dir', f.dir)
+  if (f.open) p.set('open', f.open)
   return p
 }
+
+/** Link that opens one record in place in the records table. */
+export const recordLink = (formId: string) => `/?open=${encodeURIComponent(formId)}`
 
 export const hasActiveFilters = (f: Filters) =>
   !!f.q.trim() || f.statuses.length > 0 || !!f.from || !!f.to || f.yellow

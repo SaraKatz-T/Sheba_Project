@@ -1,10 +1,8 @@
 import { Copy, Smartphone } from 'lucide-react'
-import { Link } from 'react-router'
 import type { FormStatus, FormSummary } from '../api/types'
 import { YellowChip } from '../components/StatusChip'
 import { formatDateTime, formatNumber } from '../lib/format'
 import type { DuplicateGroup } from './duplicates'
-import { formLink } from './RecordsTable'
 
 const CARDS_PER_COLUMN = 40
 
@@ -30,9 +28,11 @@ interface Props {
   visibleStatuses: FormStatus[]
   duplicates: Map<string, DuplicateGroup>
   onShowColumn: (statuses: FormStatus[]) => void
+  /** Opens the record in place in the table. */
+  onOpen: (id: string) => void
 }
 
-export function KanbanBoard({ forms, visibleStatuses, duplicates, onShowColumn }: Props) {
+export function KanbanBoard({ forms, visibleStatuses, duplicates, onShowColumn, onOpen }: Props) {
   const columns = visibleStatuses.length
     ? COLUMNS.filter((c) => c.statuses.some((s) => visibleStatuses.includes(s)))
     : COLUMNS
@@ -56,7 +56,7 @@ export function KanbanBoard({ forms, visibleStatuses, duplicates, onShowColumn }
               <ul className="board-list">
                 {items.slice(0, CARDS_PER_COLUMN).map((f) => (
                   <li key={f.id}>
-                    <Link className="board-card" to={formLink(f)}>
+                    <button type="button" className="board-card" onClick={() => onOpen(f.id)}>
                       <span className="board-card-key">
                         {f.commitment_number ? (
                           <span className="ltr num">{f.commitment_number}</span>
@@ -74,14 +74,9 @@ export function KanbanBoard({ forms, visibleStatuses, duplicates, onShowColumn }
                         {f.source === 'phone' && <Smartphone size={13} aria-label="צולם בטלפון" />}
                         {formatDateTime(f.received_at)}
                       </span>
-                      {(f.status === 'pending_review' || duplicates.has(f.id)) && (
+                      {((f.status === 'pending_review' && f.uncertain_count > 0) || duplicates.has(f.id)) && (
                         <span className="board-card-chips">
-                          {f.status === 'pending_review' &&
-                            (f.uncertain_count > 0 ? (
-                              <YellowChip count={f.uncertain_count} />
-                            ) : (
-                              <span className="chip chip-ok">בלי שדות צהובים</span>
-                            ))}
+                          {f.status === 'pending_review' && <YellowChip count={f.uncertain_count} />}
                           {duplicates.has(f.id) && (
                             <span className="chip chip-pending">
                               <Copy size={12} aria-hidden="true" />
@@ -91,7 +86,7 @@ export function KanbanBoard({ forms, visibleStatuses, duplicates, onShowColumn }
                         </span>
                       )}
                       {f.status === 'failed' && f.error && <span className="board-card-error">{f.error}</span>}
-                    </Link>
+                    </button>
                   </li>
                 ))}
               </ul>

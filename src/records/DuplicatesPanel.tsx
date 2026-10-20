@@ -1,14 +1,12 @@
 import { useMutation } from '@tanstack/react-query'
 import { ChevronDown, Copy, Merge } from 'lucide-react'
 import { useState } from 'react'
-import { Link } from 'react-router'
 import { rejectForm } from '../api/endpoints'
 import { keys, queryClient } from '../api/queries'
 import type { FormSummary } from '../api/types'
 import { StatusChip } from '../components/StatusChip'
 import { formatDate, formatDateTime, formatNumber } from '../lib/format'
 import { dismissGroup, type DuplicateGroup } from './duplicates'
-import { formLink } from './RecordsTable'
 
 interface Props {
   groups: DuplicateGroup[]
@@ -16,6 +14,7 @@ interface Props {
   onToggle: () => void
   onMerge: (group: DuplicateGroup) => void
   onAnnounce: (message: string) => void
+  onOpen: (id: string) => void
 }
 
 function CancelButton({ form, onAnnounce }: { form: FormSummary; onAnnounce: (m: string) => void }) {
@@ -60,7 +59,7 @@ function bannerTitle(groups: DuplicateGroup[]) {
   return parts.join(' · ')
 }
 
-export function DuplicatesPanel({ groups, open, onToggle, onMerge, onAnnounce }: Props) {
+export function DuplicatesPanel({ groups, open, onToggle, onMerge, onAnnounce, onOpen }: Props) {
   if (groups.length === 0) return null
 
   return (
@@ -120,9 +119,9 @@ export function DuplicatesPanel({ groups, open, onToggle, onMerge, onAnnounce }:
                 <ul className="dup-forms">
                   {g.forms.map((f) => (
                     <li key={f.id} className="dup-form">
-                      <Link to={formLink(f)} className="num">
+                      <button type="button" className="link-btn num" onClick={() => onOpen(f.id)}>
                         התקבל {formatDateTime(f.received_at)}
-                      </Link>
+                      </button>
                       <span className="muted num">
                         {g.kind === 'person' && f.commitment_number ? (
                           <>

@@ -1,6 +1,5 @@
-import { ArrowDown, ArrowUp, Copy, FlaskConical, Smartphone, Upload } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { ArrowDown, ArrowUp, ChevronDown, Copy, FlaskConical, Smartphone, Upload } from 'lucide-react'
+import { useEffect, useState, type ReactNode } from 'react'
 import type { FormSummary } from '../api/types'
 import { StatusChip, YellowChip } from '../components/StatusChip'
 import { formatDate, formatDateTime, formatNumber } from '../lib/format'
@@ -26,7 +25,7 @@ const COLUMNS: Column[] = [
   { key: 'received', label: 'התקבל' },
   { key: null, label: 'קובץ', className: 'col-file' },
   { key: 'status', label: 'סטטוס' },
-  { key: 'uncertain', label: 'לבדיקה' },
+  { key: 'uncertain', label: 'לבדיקה', className: 'col-count' },
   { key: null, label: '', className: 'col-action' },
 ]
 
@@ -37,18 +36,25 @@ interface Props {
   onSort: (key: SortKey) => void
   duplicates: Map<string, DuplicateGroup>
   onShowDuplicates: () => void
+  openId: string | null
+  onToggle: (id: string) => void
+  renderDetail: (id: string) => ReactNode
 }
 
-export function formLink(form: FormSummary) {
-  return `/review?form=${encodeURIComponent(form.id)}`
-}
-
-export function RecordsTable({ forms, sort, dir, onSort, duplicates, onShowDuplicates }: Props) {
-  const navigate = useNavigate()
+export function RecordsTable({ forms, sort, dir, onSort, duplicates, onShowDuplicates, openId, onToggle, renderDetail }: Props) {
   const [limit, setLimit] = useState(PAGE)
 
-  // A new search or filter starts again from the top of the list.
-  useEffect(() => setLimit(PAGE), [forms.length, sort, dir])
+  // A new search or sort starts again from the top of the list.
+  useEffect(() => setLimit(PAGE), [sort, dir])
+
+  // The open record is always within the rows shown, and in view.
+  const openIndex = openId ? forms.findIndex((f) => f.id === openId) : -1
+  useEffect(() => {
+    if (openIndex >= limit) setLimit(Math.ceil((openIndex + 1) / PAGE) * PAGE)
+  }, [openIndex, limit])
+  useEffect(() => {
+    if (openId) document.getElementById(`row-${openId}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [openId])
 
   const shown = forms.slice(0, limit)
 
@@ -56,7 +62,9 @@ export function RecordsTable({ forms, sort, dir, onSort, duplicates, onShowDupli
     <div className="table-card">
       <div className="table-scroll">
         <table className="records">
-          <caption className="visually-hidden">טפסים, ממוינים לפי {COLUMNS.find((c) => c.key === sort)?.label}</caption>
+          <caption className="visually-hidden">
+            טפסים, ממוינים לפי {COLUMNS.find((c) => c.key === sort)?.label}. לחיצה על שורה פותחת את הטופס.
+          </caption>
           <thead>
             <tr>
               {COLUMNS.map((col, i) => {
@@ -72,11 +80,7 @@ export function RecordsTable({ forms, sort, dir, onSort, duplicates, onShowDupli
                       <button type="button" className="th-sort" onClick={() => onSort(col.key!)}>
                         {col.label}
                         {active &&
-                          (dir === 'asc' ? (
-                            <ArrowUp size={14} aria-hidden="true" />
-                          ) : (
-                            <ArrowDown size={14} aria-hidden="true" />
-                          ))}
+                          (dir === 'asc' ? <ArrowUp size={14} aria-hidden="true" /> : <ArrowDown size={14} aria-hidden="true" />)}
                       </button>
                     ) : (
                       col.label && <span>{col.label}</span>
@@ -90,17 +94,28 @@ export function RecordsTable({ forms, sort, dir, onSort, duplicates, onShowDupli
             {shown.map((f) => {
               const SourceIcon = SOURCE_ICON[f.source]
               const dup = duplicates.get(f.id)
-              return (
-                <tr key={f.id} onClick={(e) => !(e.target as Element).closest('a, button') && navigate(formLink(f))}>
+              const open = f.id === openId
+              return [
+                <tr
+                  key={f.id}
+                  id={`row-${f.id}`}
+                  className={open ? 'is-open' : undefined}
+                  onClick={(e) => !(e.target as Element).closest('a, button:not(.row-toggle)') && onToggle(f.id)}
+                >
                   <td>
                     <div className="cell-key">
-                      <Link to={formLink(f)}>
+                      <button
+                        type="button"
+                        className="row-toggle"
+                        aria-expanded={open}
+                        aria-controls={open ? `detail-${f.id}` : undefined}
+                      >
                         {f.commitment_number ? (
                           <span className="ltr num">{f.commitment_number}</span>
                         ) : (
                           <span className="muted">{f.status === 'failed' ? 'לא נקרא' : 'טרם חולץ'}</span>
                         )}
-                      </Link>
+                      </button>
                       {dup && (
                         <button
                           type="button"
@@ -137,16 +152,17 @@ export function RecordsTable({ forms, sort, dir, onSort, duplicates, onShowDupli
                   <td>
                     <StatusChip status={f.status} />
                   </td>
-                  <td>{f.status === 'pending_review' && <YellowChip count={f.uncertain_count} />}</td>
+                  <td className="col-count">{f.status === 'pending_review' && <YellowChip count={f.uncertain_count} />}</td>
                   <td className="col-action">
-                    {f.status === 'pending_review' ? (
-                      <Link className="btn btn-sm btn-soft" to={formLink(f)}>
-                        לבדיקה
-                      </Link>
-                    ) : null}
+                    <ChevronDown size={18} className="row-chevron" aria-hidden="true" />
                   </td>
-                </tr>
-              )
+                </tr>,
+                open && (
+                  <tr key={`${f.id}-detail`} id={`detail-${f.id}`} className="detail-row">
+                    <td colSpan={COLUMNS.length}>{renderDetail(f.id)}</td>
+                  </tr>
+                ),
+              ]
             })}
           </tbody>
         </table>
