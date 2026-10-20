@@ -3,6 +3,9 @@
 .shell {
   min-height: 100vh;
   display: grid;
+  /* minmax(0, …): wide content (the table, the board) scrolls inside its own box
+     instead of stretching the whole page sideways. */
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1fr;
 }
 

@@ -6,6 +6,7 @@ import { logout } from '../api/endpoints'
 import { startLive, stopLive } from '../api/live'
 import { keys, queryClient, useForms, useUploads } from '../api/queries'
 import { isLocalBusy, resetQueue, useLocalQueue } from '../intake/uploadQueue'
+import { resetDismissedDuplicates } from '../records/duplicates'
 import { formatNumber } from '../lib/format'
 import { Brand } from './Brand'
 
@@ -50,6 +51,7 @@ export function AppShell() {
       // Drop every file and every piece of server data held in memory.
       stopLive()
       resetQueue()
+      resetDismissedDuplicates()
       queryClient.clear()
       queryClient.setQueryData(keys.session, false)
       navigate('/login', { replace: true })
