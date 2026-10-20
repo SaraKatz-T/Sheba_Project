@@ -2,7 +2,7 @@
 
 המסמך מיועד למי שבונה את שכבת הבקשות בשרת הפייתון. הוא מסביר מה הלקוח כבר עושה, ומה השרת צריך לממש כדי שהלקוח יעבוד מולו בלי שינויים.
 
-**מקור האמת הוא `api-contract.md` (גרסה 2.1).** המסמך הזה מסכם אותו ומוסיף המלצות מימוש. אם יש סתירה, החוזה קובע.
+**מקור האמת הוא `api-contract.md` (גרסה 2.2).** המסמך הזה מסכם אותו ומוסיף המלצות מימוש. אם יש סתירה, החוזה קובע.
 
 ## הקשר
 
@@ -54,8 +54,10 @@
 2. עד 25MB, אחרת `413`. קובץ ריק: `400`.
 3. חישוב SHA-256 בשרת והשוואה ל-`sha256` שנשלח.
 4. אם קובץ עם אותו SHA-256 כבר קיים ולא נשלח `force=true`: `409` עם `existing_upload` (`id`, `file_name`, `received_at`).
-5. שמירת הקובץ מחוץ לתיקייה ציבורית, יצירת Upload בסטטוס `queued`, הכנסה לתור.
-6. תשובה `202` עם ה-Upload המלא, כולל `queue_position` ו-`eta_at`.
+5. שמירת הקובץ מחוץ לתיקייה ציבורית, ויצירת Upload בסטטוס `queued`.
+6. **תמונה מוקטנת של העמוד הראשון, מיד** (חדש בגרסה 2.2), ברוחב של בערך 240 פיקסלים: PDF דרך PyMuPDF, תמונות דרך Pillow, HEIC דרך pillow-heif. שמירה ליד הקובץ, ומילוי `thumbnail_url = /api/uploads/{id}/thumbnail`. אם נכשל, `thumbnail_url = null`, וזה לא מכשיל את הקליטה.
+7. הכנסה לתור.
+8. תשובה `202` עם ה-Upload המלא, כולל `queue_position`, `eta_at` ו-`thumbnail_url`.
 
 ### 3. תור ועובדים
 
@@ -99,6 +101,7 @@
 
 - `GET /api/uploads`: קבצים מ-24 השעות האחרונות, מהחדש לישן.
 - `GET /api/uploads/{id}`.
+- `GET /api/uploads/{id}/thumbnail`: התמונה המוקטנת, עם `Cache-Control: no-store`. `404` עם גוף JSON אם עוד לא מוכנה.
 - `GET /api/forms`: כל הטפסים (`FormSummary`), מהחדש לישן. הלקוח מחשב בעצמו חיפוש, סינון, מדדים ולוח שנה.
 - `GET /api/forms/{id}`: `FormDetail` עם `pages` ו-`fields`.
 - `GET /api/forms/{id}/pages/{n}/image`: PNG או JPEG. PDF מרנדרים לתמונה (למשל PyMuPDF), ו-HEIC/TIFF ממירים (Pillow + pillow-heif).
@@ -116,7 +119,8 @@
 
 - `POST /api/capture-sessions` (דורש כניסה): `token` אקראי (`secrets.token_urlsafe(32)`), תוקף 10 דקות.
 - `GET /api/capture/{token}`: `200` / `404` / `410`.
-- `POST /api/capture/{token}/uploads`: כמו `POST /api/uploads` עם `source = phone`. מחזיר רק `{id, status}`, בלי נתונים אישיים.
+- `POST /api/capture/{token}/uploads`: כמו `POST /api/uploads` עם `source = phone`, כולל התמונה המוקטנת. מחזיר רק `{id, status}`, בלי נתונים אישיים.
+- **איך הצילום מגיע למסך המחשב:** הטלפון שולח לשרת, השרת שולח `upload.updated` לכל המחוברים, והמחשב מציג את הצילום לפי `thumbnail_url`. הטלפון והמחשב לא מדברים ישירות; השרת הוא נקודת המפגש.
 
 ## מסד נתונים (הצעה)
 

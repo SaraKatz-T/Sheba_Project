@@ -57,8 +57,8 @@ export const retryForm = (id: string) =>
 export const mergeForm = (id: string, into: string, values: Record<string, string>) =>
   request<FormSummary>(`/forms/${enc(id)}/merge`, { method: 'POST', ...json({ into, values }) })
 
-/** Fetches a page image into memory only; the caller must revoke the URL when done. */
-export async function fetchPageImage(imageUrl: string, signal?: AbortSignal): Promise<string> {
+/** Fetches an API image (page, thumbnail) into memory only; the caller must revoke the URL. */
+export async function fetchImage(imageUrl: string, signal?: AbortSignal): Promise<string> {
   let res: Response
   try {
     res = await fetch(imageUrl, { credentials: 'same-origin', cache: 'no-store', signal })

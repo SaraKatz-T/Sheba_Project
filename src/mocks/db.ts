@@ -21,7 +21,7 @@ import {
   randomFlags,
   type Rng,
 } from './fakeData'
-import { renderContinuationSvg, renderFormSvg } from './formImage'
+import { renderContinuationSvg, renderFormSvg, renderScanSvg } from './formImage'
 
 interface StoredUpload extends Upload {
   /** Kept only for browser-displayable images, to serve back as the form page. */
@@ -96,6 +96,16 @@ export const getForm = (id: string) => forms.get(id)
 
 export const findUploadBySha = (sha: string) =>
   [...uploads.values()].find((u) => u.file_sha256 === sha)
+
+const thumbnailUrl = (id: string) => `/api/uploads/${id}/thumbnail`
+
+/** The first page as the user sent it: the photo itself, the first form, or a blank scan. */
+export function thumbnail(upload: StoredUpload): Blob {
+  if (upload.blob) return upload.blob
+  const first = upload.form_ids.length ? forms.get(upload.form_ids[0]) : undefined
+  const svg = first?.fields.length ? renderFormSvg(first.fields, first.seed) : renderScanSvg()
+  return new Blob([svg], { type: 'image/svg+xml' })
+}
 
 export function pageImage(form: StoredForm, page: number): Blob | null {
   if (page < 1 || page > form.page_count) return null
@@ -317,8 +327,9 @@ const MULTI_PAGE = /^(application\/pdf|image\/tiff)$/
 export async function createUpload(file: File, sha256: string, source: FormSource): Promise<StoredUpload> {
   const ts = nowIso()
   const seed = Math.floor(Math.random() * 2 ** 31)
+  const id = newUploadId()
   const upload: StoredUpload = {
-    id: newUploadId(),
+    id,
     file_name: file.name,
     file_type: file.type || 'application/octet-stream',
     file_size: file.size,
@@ -332,6 +343,7 @@ export async function createUpload(file: File, sha256: string, source: FormSourc
     form_ids: [],
     queue_position: null,
     eta_at: null,
+    thumbnail_url: thumbnailUrl(id),
     error: null,
     blob: DISPLAYABLE.test(file.type) ? file : null,
     seed,
@@ -461,8 +473,9 @@ function seed() {
       received.setHours(spec.hour, Math.floor(rng() * 60), 0, 0)
       if (received.getTime() > now) received.setTime(now - (i + 1) * 7 * 60_000)
       const phone = spec.source === 'phone'
+      const id = newUploadId()
       upload = {
-        id: newUploadId(),
+        id,
         file_name: spec.batch ?? spec.file ?? `טופס_${1040 + i}.${phone ? 'jpg' : 'pdf'}`,
         file_type: phone ? 'image/jpeg' : 'application/pdf',
         file_size: 180_000 + Math.floor(rng() * 900_000),
@@ -476,6 +489,7 @@ function seed() {
         form_ids: [],
         queue_position: null,
         eta_at: null,
+        thumbnail_url: thumbnailUrl(id),
         error: null,
         blob: null,
         seed: Math.floor(rng() * 2 ** 31),

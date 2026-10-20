@@ -54,6 +54,8 @@ export interface Upload {
   queue_position: number | null
   /** Estimated completion of the whole file. */
   eta_at: string | null
+  /** Small image of the first page; null until the server has made it. */
+  thumbnail_url: string | null
   error: string | null
 }
 

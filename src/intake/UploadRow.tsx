@@ -17,6 +17,7 @@ import { upsertForm, upsertUpload } from '../api/queries'
 import type { FormSummary } from '../api/types'
 import { formatBytes } from '../lib/files'
 import { formatEta, formatPages } from '../lib/format'
+import { useAuthedImage } from '../lib/useAuthedImage'
 import { formPercent, type Row, type RowView, type Tone } from './rows'
 import { removeItem, retryItem, sendAnyway } from './uploadQueue'
 
@@ -47,7 +48,11 @@ function Bar({ value, tone, label }: { value: number | 'indeterminate'; tone: To
 }
 
 function Thumb({ row }: { row: Row }) {
-  if (row.previewUrl) return <img className="up-thumb" src={row.previewUrl} alt="" />
+  // A file picked on this computer previews from memory; anything else (a phone photo,
+  // a PDF, or after a reload) asks the server for its thumbnail.
+  const remote = useAuthedImage(row.previewUrl ? null : (row.upload?.thumbnail_url ?? null))
+  const src = row.previewUrl ?? remote
+  if (src) return <img className="up-thumb" src={src} alt="" />
   const isPdf = /\.pdf$/i.test(row.name) || row.upload?.file_type === 'application/pdf'
   const Icon = isPdf ? FileText : FileImage
   return (

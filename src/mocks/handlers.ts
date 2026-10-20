@@ -99,6 +99,17 @@ export const handlers = [
     return upload ? HttpResponse.json(db.uploadView(upload)) : notFound()
   }),
 
+  http.get('/api/uploads/:id/thumbnail', async ({ params }) => {
+    if (!isAuthed()) return unauthorized()
+    const upload = db.getUpload(String(params.id))
+    if (!upload) return notFound()
+    await latency()
+    const blob = db.thumbnail(upload)
+    return new HttpResponse(blob, {
+      headers: { 'Content-Type': blob.type, 'Cache-Control': 'no-store' },
+    })
+  }),
+
   http.post('/api/uploads/:id/retry', async ({ params }) => {
     if (!isAuthed()) return unauthorized()
     await latency()

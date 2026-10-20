@@ -8,6 +8,21 @@ const esc = (s: string) =>
 const PRINT_FONT = "'Segoe UI', Arial, sans-serif"
 const HAND_FONT = "'Segoe Print', 'Comic Sans MS', 'Segoe UI', cursive"
 
+/** A scanned sheet before it has been read: what a thumbnail shows while queued. */
+export function renderScanSvg(): string {
+  const lines = Array.from({ length: 12 }, (_, i) => {
+    const y = 360 + i * 95
+    const w = 520 + ((i * 137) % 380)
+    return `<rect x="${PAGE_W - 140 - w}" y="${y}" width="${w}" height="22" rx="11" fill="#d9dce6"/>`
+  }).join('')
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE_W}" height="${PAGE_H}" viewBox="0 0 ${PAGE_W} ${PAGE_H}">
+  <rect width="100%" height="100%" fill="#fbfaf6"/>
+  <rect x="60" y="60" width="${PAGE_W - 120}" height="${PAGE_H - 120}" fill="none" stroke="#bbb" stroke-width="2"/>
+  <rect x="${PAGE_W / 2 - 300}" y="160" width="600" height="44" rx="22" fill="#c5c9d6"/>
+  ${lines}
+</svg>`
+}
+
 /** Pages after the first: a plain continuation sheet. */
 export function renderContinuationSvg(page: number): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE_W}" height="${PAGE_H}" viewBox="0 0 ${PAGE_W} ${PAGE_H}">
