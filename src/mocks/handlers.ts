@@ -21,6 +21,8 @@ const notFound = () => error(404, 'not_found')
 const latency = () => delay(120 + Math.random() * 180)
 
 const captureSessions = new Map<string, number>()
+const captureCounts = new Map<string, number>()
+const MAX_PHOTOS_PER_CODE = 100
 
 async function readUpload(request: Request) {
   const data = await request.formData()
@@ -236,8 +238,12 @@ export const handlers = [
     const expires = captureSessions.get(String(params.token))
     if (expires === undefined) return notFound()
     if (expires < Date.now()) return error(410, 'expired')
+    const token = String(params.token)
+    const sent = captureCounts.get(token) ?? 0
+    if (sent >= MAX_PHOTOS_PER_CODE) return error(429, 'too_many', 'נשלחו כבר 100 צילומים בקוד הזה. אפשר לסרוק קוד חדש.')
     const parsed = await readUpload(request)
     if (parsed.response) return parsed.response
+    captureCounts.set(token, sent + 1)
     const upload = await db.createUpload(parsed.file, parsed.sha, 'phone')
     return HttpResponse.json({ id: upload.id, status: upload.status }, { status: 202 })
   }),

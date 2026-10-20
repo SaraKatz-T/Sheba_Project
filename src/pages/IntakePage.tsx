@@ -5,6 +5,7 @@ import { useLiveStatus } from '../api/liveStatus'
 import { useForms, useUploads } from '../api/queries'
 import type { UploadStatus } from '../api/types'
 import { DropZone } from '../intake/DropZone'
+import { PhonePanel } from '../intake/PhonePanel'
 import { buildRows, describe } from '../intake/rows'
 import { UploadRow } from '../intake/UploadRow'
 import { addFiles, isLocalBusy, useLocalQueue } from '../intake/uploadQueue'
@@ -140,7 +141,10 @@ export function IntakePage() {
         </div>
       </div>
 
-      <DropZone dragging={dragging} onFiles={add} />
+      <div className="intake-top">
+        <DropZone dragging={dragging} onFiles={add} />
+        <PhonePanel />
+      </div>
       {dragging && <div className="drop-veil" aria-hidden="true" />}
 
       <p className="visually-hidden" aria-live="polite">

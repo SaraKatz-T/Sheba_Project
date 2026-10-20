@@ -3,6 +3,7 @@ import { CircleAlert, LoaderCircle, RefreshCw } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router'
 import { queryClient, useSession } from './api/queries'
+import { CapturePage } from './capture/CapturePage'
 import { AppShell } from './components/AppShell'
 import { EmptyState } from './components/EmptyState'
 import { IntakePage } from './pages/IntakePage'
@@ -56,6 +57,8 @@ export function App() {
       <BrowserRouter useTransitions={false}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          {/* Opened on the phone from the QR code; the token in the link replaces the login. */}
+          <Route path="/capture/:token" element={<CapturePage />} />
           <Route
             element={
               <RequireAuth>
