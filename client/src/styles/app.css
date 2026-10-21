@@ -1,0 +1,404 @@
+/* App shell */
+
+.shell {
+  min-height: 100vh;
+  display: grid;
+  /* minmax(0, …): wide content (the table, the board) scrolls inside its own box
+     instead of stretching the whole page sideways. */
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+}
+
+/* As on sheba.co.il: the bar shares the page ground. A hairline appears only once
+   content scrolls under it. */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--bg);
+  transition: box-shadow var(--base) var(--ease);
+}
+
+.topbar.is-scrolled {
+  box-shadow: 0 1px 0 var(--line-strong);
+}
+
+/* Full width, like sheba.co.il: the logo sits near the corner, the same distance
+   from the top as from the side (22px). */
+.topbar-inner {
+  --logo-gap: 22px;
+  display: flex;
+  align-items: center;
+  gap: var(--s-7);
+  height: calc(66px + 2 * var(--logo-gap));
+  padding: 0 var(--logo-gap);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  min-width: 0;
+}
+
+.brand-logo {
+  display: block;
+  height: 66px;
+  width: auto;
+}
+
+.brand-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--line-strong);
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.brand-title {
+  font-weight: 700;
+  font-size: var(--text-nav);
+  color: var(--brand-600);
+}
+
+.brand-sub {
+  font-size: var(--text-xs);
+  color: var(--ink-500);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+
+/* Plain text pills, like the sheba.co.il menu; the current screen is a white pill. */
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: 36px;
+  padding: 0 var(--s-4);
+  border-radius: var(--pill);
+  color: var(--ink-black);
+  font-size: var(--text-nav);
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color var(--fast) var(--ease),
+    color var(--fast) var(--ease),
+    box-shadow var(--fast) var(--ease);
+}
+
+.nav-link:hover {
+  background: rgb(22 31 114 / 0.06);
+}
+
+.nav-link[aria-current='page'] {
+  background: var(--surface);
+  color: var(--brand-600);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+.badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: var(--pill);
+  background: var(--pink-ink);
+  color: #fff;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.badge-busy {
+  background: var(--brand-600);
+}
+
+.topbar-end {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  margin-inline-start: auto;
+}
+
+.mock-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--pill);
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+}
+
+.main {
+  width: 100%;
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: var(--s-7) var(--s-6);
+}
+
+/* Page header */
+
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin-bottom: var(--s-6);
+}
+
+.page-head p {
+  margin-top: var(--s-2);
+  color: var(--ink-500);
+}
+
+/* Cards and empty state */
+
+.card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-3);
+  padding: var(--s-8) var(--s-5);
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.empty-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: var(--s-2);
+  border-radius: 50%;
+  background: var(--brand-50);
+  color: var(--brand-600);
+}
+
+.empty h2 {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--brand-600);
+}
+
+.empty p {
+  max-width: 44ch;
+  color: var(--ink-500);
+}
+
+/* Full-page states (loading, no connection) */
+
+.center-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--s-5);
+  color: var(--brand-600);
+}
+
+/* Login – follows the sheba.co.il hero: pale ground, navy/pink headline, brand rings */
+
+.login {
+  position: relative;
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* The brand rings sit where sheba.co.il puts them: large, at the far side, running
+   off the bottom of the screen. */
+.login-rings {
+  position: absolute;
+  top: 80px;
+  inset-inline-end: -340px;
+  width: 1000px;
+  height: 1000px;
+}
+
+.login-top {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: calc(72px + 2 * 22px);
+  padding: 0 22px; /* same distance from the top and the side */
+}
+
+.login-logo {
+  display: block;
+  height: 72px;
+  width: auto;
+}
+
+.login-main {
+  position: relative;
+  display: grid;
+  align-content: center;
+  gap: var(--s-6);
+  width: min(100%, 1360px);
+  margin: 0 auto;
+  padding: var(--s-5) var(--s-7) var(--s-8);
+}
+
+.login-hero,
+.login-card {
+  width: min(100%, 520px);
+}
+
+.hero-title {
+  display: grid;
+  gap: var(--s-1);
+  font-size: var(--text-hero);
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--brand-600);
+}
+
+.hero-accent {
+  color: var(--pink);
+  font-size: 0.62em;
+  font-weight: 800;
+}
+
+.hero-lead {
+  margin-top: var(--s-4);
+  max-width: 40ch;
+  font-size: var(--text-lg);
+  color: var(--ink-700);
+}
+
+.login-card {
+  padding: var(--s-6);
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  animation-delay: 80ms;
+}
+
+.login-title {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--brand-600);
+}
+
+.login-lead {
+  margin: var(--s-1) 0 var(--s-5);
+  color: var(--ink-500);
+}
+
+.login-form {
+  display: grid;
+  gap: var(--s-4);
+}
+
+.password-wrap {
+  position: relative;
+}
+
+.password-wrap .input {
+  padding-inline-end: 52px;
+}
+
+.password-wrap .icon-btn {
+  position: absolute;
+  inset-inline-end: 5px;
+  top: 5px;
+}
+
+.login-foot {
+  margin-top: var(--s-4);
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+  text-align: center;
+}
+
+/* Presentation laptops (e.g. 1280×720): keep the whole login on one screen. */
+@media (max-height: 820px) and (min-width: 861px) {
+  .login-top {
+    height: auto;
+    padding-block: 22px;
+  }
+  .login-main {
+    gap: var(--s-5);
+    padding-block: 0 var(--s-5);
+  }
+  .hero-title {
+    font-size: clamp(2rem, 1rem + 2.2vw, 3rem);
+  }
+  .hero-lead {
+    margin-top: var(--s-2);
+  }
+  .login-card {
+    padding: var(--s-5) var(--s-6);
+  }
+}
+
+@media (max-width: 1100px) {
+  .login-rings {
+    inset-inline-end: -520px;
+  }
+}
+
+@media (max-width: 860px) {
+  .topbar-inner {
+    flex-wrap: wrap;
+    gap: 0 var(--s-4);
+    height: auto;
+    padding: var(--s-3) var(--s-4) 0;
+  }
+  .brand-logo {
+    height: 48px;
+  }
+  .nav {
+    order: 3;
+    width: 100%;
+    padding-block: var(--s-2);
+    overflow-x: auto;
+  }
+  .brand-sub,
+  .mock-chip span {
+    display: none;
+  }
+  .main {
+    padding: var(--s-5) var(--s-4);
+  }
+  .page-head {
+    flex-wrap: wrap;
+  }
+  .login-top {
+    padding: 0 var(--s-4);
+  }
+  .login-main {
+    padding: var(--s-4) var(--s-4) var(--s-7);
+  }
+  .login-rings {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .brand-divider,
+  .brand-text {
+    display: none;
+  }
+}

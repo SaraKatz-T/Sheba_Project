@@ -1,0 +1,86 @@
+import { QueryClientProvider } from '@tanstack/react-query'
+import { CircleAlert, RefreshCw } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router'
+import { queryClient, useSession } from './api/queries'
+import { CapturePage } from './capture/CapturePage'
+import { AppShell } from './components/AppShell'
+import { RingsLoader } from './components/BrandRings'
+import { EmptyState } from './components/EmptyState'
+import { IntakePage } from './pages/IntakePage'
+import { LoginPage } from './pages/LoginPage'
+import { RecordsPage } from './pages/RecordsPage'
+
+function RequireAuth({ children }: { children: ReactNode }) {
+  const session = useSession()
+  const location = useLocation()
+
+  if (session.isPending) {
+    return (
+      <div className="center-screen" role="status">
+        <RingsLoader size={40} />
+        <span className="visually-hidden">טוען…</span>
+      </div>
+    )
+  }
+
+  if (session.isError) {
+    return (
+      <div className="center-screen">
+        <EmptyState
+          icon={<CircleAlert size={26} />}
+          title="אין חיבור לשרת"
+          action={
+            <button type="button" className="btn btn-primary" onClick={() => session.refetch()}>
+              <RefreshCw size={18} aria-hidden="true" />
+              לנסות שוב
+            </button>
+          }
+        >
+          {session.error.message}
+        </EmptyState>
+      </div>
+    )
+  }
+
+  if (!session.data) {
+    return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />
+  }
+
+  return children
+}
+
+function ReviewRedirect() {
+  const { search } = useLocation()
+  const form = new URLSearchParams(search).get('form')
+  return <Navigate to={form ? `/records?open=${encodeURIComponent(form)}` : '/records?status=pending_review'} replace />
+}
+
+export function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      {/* No Suspense here, so transitions only delay filter controls; update the URL synchronously. */}
+      <BrowserRouter useTransitions={false}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          {/* Opened on the phone from the QR code; the token in the link replaces the login. */}
+          <Route path="/capture/:token" element={<CapturePage />} />
+          <Route
+            element={
+              <RequireAuth>
+                <AppShell />
+              </RequireAuth>
+            }
+          >
+            <Route index element={<Navigate to="/records" replace />} />
+            <Route path="intake" element={<IntakePage />} />
+            <Route path="records" element={<RecordsPage />} />
+            {/* Review happens inside the records now; old links still land on the right record. */}
+            <Route path="review" element={<ReviewRedirect />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </QueryClientProvider>
+  )
+}
