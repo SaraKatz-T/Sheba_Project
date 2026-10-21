@@ -1,8 +1,8 @@
 // Duplicates among live forms (rejected ones, including merged ones, no longer count,
 // so resolving a group makes it disappear):
 // - 'form':   the same commitment number twice — the same paper captured again.
-// - 'person': the same ID number on forms with different commitment numbers —
-//             either two real forms of one patient, or a misread ID.
+// The same ID number with different commitment numbers is NOT flagged: one patient
+// can have several tests.
 // Groups the user chose to keep ("keep them all") are stored on the server.
 import { groupKey } from '../api/queries'
 import type { FormSummary } from '../api/types'
@@ -38,10 +38,7 @@ export function findDuplicates(forms: FormSummary[], dismissed: Set<string>): Du
   const groups: DuplicateGroup[] = []
   const seen = new Set<string>()
 
-  for (const [kind, pick] of [
-    ['form', (f: FormSummary) => f.commitment_number],
-    ['person', (f: FormSummary) => f.id_number],
-  ] as const) {
+  for (const [kind, pick] of [['form', (f: FormSummary) => f.commitment_number]] as const) {
     for (const [value, group] of groupBy(live, pick)) {
       const ids = groupKey(group.map((f) => f.id))
       // The same forms grouped by commitment number need not show again by ID.

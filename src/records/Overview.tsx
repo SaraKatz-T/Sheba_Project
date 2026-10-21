@@ -84,7 +84,7 @@ export function Overview({ forms, onSelectDay, onStartReview }: Props) {
           </span>
           <span className="kpi-value">{formatNumber(m.pending)}</span>
           <span className="kpi-sub">
-            {m.pending === 0 ? 'אין טפסים ממתינים 🎉' : `הוותיק ביותר ${formatAgo(m.oldestWaitMs ?? 0)}`}
+            {m.pending === 0 ? 'אין טפסים ממתינים' : `הוותיק ביותר ${formatAgo(m.oldestWaitMs ?? 0)}`}
           </span>
         </button>
 

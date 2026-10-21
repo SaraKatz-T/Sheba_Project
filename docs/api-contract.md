@@ -158,6 +158,7 @@
   "form_date": "2026-10-19",
   "page_count": 3,
   "uncertain_count": 2,
+  "uncertain_keys": ["id_number", "received_date"],
   "corrected_count": 0,
   "progress": null,
   "error": null,
@@ -175,6 +176,7 @@
 | `person_name`, `id_number`, `form_date` | ערכים מתוך השדות, לחיפוש ולזיהוי כפילויות. `null` עד סוף החילוץ |
 | `page_count` | מספר העמודים **בטופס** |
 | `uncertain_count` | כמה שדות צהובים עדיין פתוחים |
+| `uncertain_keys` | ה-`key` של השדות הצהובים שעדיין פתוחים, לסימון התאים בטבלה |
 | `corrected_count` | כמה שדות תוקנו ידנית. 0 באישור = "אושר בלי תיקון" |
 | `progress` | רק בזמן `received`/`processing`, לא חובה: `{ "percent": 60, "step": "אימות שני (Qwen)" }` |
 | `error` | רק ב-`failed`: הסבר קצר בעברית פשוטה |

@@ -1,9 +1,10 @@
 /* Top of the intake screen: drop zone beside the phone card */
 
+/* Two equal boxes, same height and frame, content centered */
 .intake-top {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
-  gap: var(--s-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-5);
   align-items: stretch;
 }
 
@@ -12,10 +13,11 @@
   align-content: center;
   justify-items: center;
   gap: var(--s-2);
-  padding: var(--s-5);
+  min-height: 320px;
+  padding: var(--s-6) var(--s-5);
   background: var(--surface);
+  border: 2px solid var(--line);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow);
   text-align: center;
 }
 
@@ -42,9 +44,9 @@
 .phone-icon {
   display: grid;
   place-items: center;
-  width: 56px;
-  height: 56px;
-  margin-bottom: var(--s-1);
+  width: 64px;
+  height: 64px;
+  margin-bottom: var(--s-2);
   border-radius: 50%;
   background: var(--pink-50);
   color: var(--pink-ink);
@@ -130,9 +132,11 @@
 .dropzone {
   position: relative;
   display: grid;
+  align-content: center;
   justify-items: center;
   gap: var(--s-2);
-  padding: var(--s-7) var(--s-5);
+  min-height: 320px;
+  padding: var(--s-6) var(--s-5);
   background: var(--surface);
   border: 2px dashed var(--line-strong);
   border-radius: var(--radius-xl);
@@ -183,7 +187,7 @@
 }
 
 .dz-sub {
-  max-width: 52ch;
+  max-width: 40ch;
   color: var(--ink-500);
 }
 

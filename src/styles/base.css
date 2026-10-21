@@ -96,8 +96,8 @@ a {
   align-items: center;
   justify-content: center;
   gap: var(--s-2);
-  min-height: 40px;
-  padding: 0 var(--s-5);
+  min-height: 36px;
+  padding: 0 18px;
   border: 1.5px solid transparent;
   border-radius: var(--pill);
   font-weight: 600;
@@ -126,8 +126,8 @@ a {
 
 .btn-outline {
   background: transparent;
-  border-color: var(--ink-900);
-  color: var(--ink-900);
+  border-color: var(--ink-black);
+  color: var(--ink-black);
 }
 
 .btn-outline:hover:not(:disabled) {
@@ -148,12 +148,12 @@ a {
 
 .btn-block {
   width: 100%;
-  min-height: 50px;
+  min-height: 46px;
   font-size: var(--text-md);
 }
 
 .btn-sm {
-  min-height: 32px;
+  min-height: 30px;
   padding: 0 var(--s-3);
   font-size: var(--text-sm);
 }
@@ -244,8 +244,8 @@ kbd {
 .icon-btn {
   display: inline-grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   border: 0;
   border-radius: 50%;

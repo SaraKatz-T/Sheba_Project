@@ -81,6 +81,8 @@ export interface FormSummary {
   form_date: string | null
   page_count: number
   uncertain_count: number
+  /** Keys of the fields still open for review, to mark their cells in the table. */
+  uncertain_keys: string[]
   corrected_count: number
   progress: Progress | null
   error: string | null

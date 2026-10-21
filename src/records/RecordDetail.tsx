@@ -14,6 +14,7 @@ import { usePageImageCache, useCachedImage, type PageImageCache } from '../revie
 import { PageViewer } from '../review/PageViewer'
 import { RejectControl } from '../review/RejectControl'
 import { ShortcutsDialog } from '../review/ShortcutsDialog'
+import { RingsLoader } from '../components/BrandRings'
 import { recordLink } from './filters'
 
 interface Props {
@@ -189,7 +190,7 @@ export function RecordDetail({ id, nextPending, onDone, onClose }: Props) {
   if (detail.isPending) {
     return (
       <div className="detail-loading" role="status">
-        <LoaderCircle size={20} className="spin" aria-hidden="true" />
+        <RingsLoader size={24} />
         פותח את הטופס…
       </div>
     )

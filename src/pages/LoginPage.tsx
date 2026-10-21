@@ -5,6 +5,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router'
 import { login } from '../api/endpoints'
 import { keys, queryClient, useSession } from '../api/queries'
 import { Logo } from '../components/Brand'
+import { BrandRings } from '../components/BrandRings'
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 
@@ -48,17 +49,14 @@ export function LoginPage() {
 
   return (
     <div className="login">
-      <div className="rings" aria-hidden="true">
-        <span className="ring ring-pink" />
-        <span className="ring ring-teal" />
-      </div>
+      <BrandRings className="login-rings" />
 
       <header className="login-top">
         <Logo className="login-logo" />
       </header>
 
       <main className="login-main">
-        <div className="login-hero fade-up">
+        <div className="login-hero rise">
           <h1 className="hero-title">
             ניהול טפסי התחייבות
             <span className="hero-accent">המעבדה המרכזית לנגיפים</span>
@@ -66,7 +64,7 @@ export function LoginPage() {
           <p className="hero-lead">טפסים סרוקים, מצולמים ובכתב יד נקלטים, מחולצים ונבדקים במקום אחד.</p>
         </div>
 
-        <section className="login-card fade-up" aria-labelledby="login-title">
+        <section className="login-card rise rise-late" aria-labelledby="login-title">
           <h2 id="login-title" className="login-title">
             כניסה למערכת
           </h2>

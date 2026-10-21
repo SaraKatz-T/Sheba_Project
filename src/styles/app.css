@@ -9,22 +9,29 @@
   grid-template-rows: auto 1fr;
 }
 
+/* As on sheba.co.il: the bar shares the page ground. A hairline appears only once
+   content scrolls under it. */
 .topbar {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: var(--surface);
-  box-shadow: 0 1px 0 var(--line), var(--shadow-sm);
+  background: var(--bg);
+  transition: box-shadow var(--base) var(--ease);
 }
 
+.topbar.is-scrolled {
+  box-shadow: 0 1px 0 var(--line-strong);
+}
+
+/* Full width, like sheba.co.il: the logo sits near the corner, the same distance
+   from the top as from the side (22px). */
 .topbar-inner {
+  --logo-gap: 22px;
   display: flex;
   align-items: center;
   gap: var(--s-7);
-  max-width: 1360px;
-  height: 76px;
-  margin: 0 auto;
-  padding: 0 var(--s-6);
+  height: calc(66px + 2 * var(--logo-gap));
+  padding: 0 var(--logo-gap);
 }
 
 .brand {
@@ -36,7 +43,7 @@
 
 .brand-logo {
   display: block;
-  height: 48px;
+  height: 66px;
   width: auto;
 }
 
@@ -54,7 +61,7 @@
 
 .brand-title {
   font-weight: 700;
-  font-size: var(--text-md);
+  font-size: var(--text-nav);
   color: var(--brand-600);
 }
 
@@ -66,56 +73,36 @@
 .nav {
   display: flex;
   align-items: center;
-  gap: var(--s-2);
-  height: 100%;
+  gap: var(--s-1);
 }
 
+/* Plain text pills, like the sheba.co.il menu; the current screen is a white pill. */
 .nav-link {
-  position: relative;
   display: inline-flex;
   align-items: center;
   gap: var(--s-2);
-  height: 100%;
-  padding: 0 var(--s-3);
-  color: var(--ink-900);
-  font-weight: 500;
+  height: 36px;
+  padding: 0 var(--s-4);
+  border-radius: var(--pill);
+  color: var(--ink-black);
+  font-size: var(--text-nav);
   text-decoration: none;
-  transition: color var(--fast) var(--ease);
+  white-space: nowrap;
+  transition:
+    background-color var(--fast) var(--ease),
+    color var(--fast) var(--ease),
+    box-shadow var(--fast) var(--ease);
 }
 
-.nav-link svg {
-  color: var(--ink-500);
-  transition: color var(--fast) var(--ease);
-}
-
-.nav-link::after {
-  content: '';
-  position: absolute;
-  inset-inline: var(--s-3);
-  bottom: 0;
-  height: 3px;
-  border-radius: 3px 3px 0 0;
-  background: var(--brand-600);
-  transform: scaleX(0);
-  transition: transform var(--base) var(--ease);
-}
-
-.nav-link:hover,
-.nav-link:hover svg {
-  color: var(--brand-600);
+.nav-link:hover {
+  background: rgb(22 31 114 / 0.06);
 }
 
 .nav-link[aria-current='page'] {
+  background: var(--surface);
   color: var(--brand-600);
-  font-weight: 700;
-}
-
-.nav-link[aria-current='page'] svg {
-  color: var(--brand-600);
-}
-
-.nav-link[aria-current='page']::after {
-  transform: scaleX(1);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
 }
 
 .badge {
@@ -238,61 +225,27 @@
   background: var(--bg);
 }
 
-.rings {
+/* The brand rings sit where sheba.co.il puts them: large, at the far side, running
+   off the bottom of the screen. */
+.login-rings {
   position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.ring {
-  position: absolute;
-  border-radius: 50%;
-  border-style: solid;
-}
-
-.ring-pink {
-  width: 760px;
-  height: 760px;
-  inset-inline-end: -180px;
-  top: 120px;
-  border-width: 16px;
-  border-color: var(--pink);
-  -webkit-mask-image: linear-gradient(to bottom, #000 25%, transparent 92%);
-  mask-image: linear-gradient(to bottom, #000 25%, transparent 92%);
-  animation: ring-in var(--slow) var(--ease) both;
-}
-
-.ring-teal {
-  width: 860px;
-  height: 860px;
-  inset-inline-end: -250px;
-  top: 40px;
-  border-width: 12px;
-  border-color: var(--teal);
-  opacity: 0.85;
-  -webkit-mask-image: linear-gradient(200deg, transparent 20%, #000 75%);
-  mask-image: linear-gradient(200deg, transparent 20%, #000 75%);
-  animation: ring-in var(--slow) 120ms var(--ease) both;
-}
-
-@keyframes ring-in {
-  from {
-    opacity: 0;
-    transform: scale(0.96);
-  }
+  top: 80px;
+  inset-inline-end: -340px;
+  width: 1000px;
+  height: 1000px;
 }
 
 .login-top {
   position: relative;
   display: flex;
   align-items: center;
-  height: 88px;
-  padding: 0 var(--s-7);
+  height: calc(72px + 2 * 22px);
+  padding: 0 22px; /* same distance from the top and the side */
 }
 
 .login-logo {
   display: block;
-  height: 52px;
+  height: 72px;
   width: auto;
 }
 
@@ -382,7 +335,8 @@
 /* Presentation laptops (e.g. 1280×720): keep the whole login on one screen. */
 @media (max-height: 820px) and (min-width: 861px) {
   .login-top {
-    height: 72px;
+    height: auto;
+    padding-block: 22px;
   }
   .login-main {
     gap: var(--s-5);
@@ -400,11 +354,8 @@
 }
 
 @media (max-width: 1100px) {
-  .ring-pink {
-    inset-inline-end: -420px;
-  }
-  .ring-teal {
-    inset-inline-end: -500px;
+  .login-rings {
+    inset-inline-end: -520px;
   }
 }
 
@@ -416,19 +367,13 @@
     padding: var(--s-3) var(--s-4) 0;
   }
   .brand-logo {
-    height: 40px;
+    height: 48px;
   }
   .nav {
     order: 3;
     width: 100%;
-    height: 48px;
+    padding-block: var(--s-2);
     overflow-x: auto;
-  }
-  .nav-link:first-child {
-    padding-inline-start: 0;
-  }
-  .nav-link:first-child::after {
-    inset-inline-start: 0;
   }
   .brand-sub,
   .mock-chip span {
@@ -446,7 +391,7 @@
   .login-main {
     padding: var(--s-4) var(--s-4) var(--s-7);
   }
-  .rings {
+  .login-rings {
     display: none;
   }
 }

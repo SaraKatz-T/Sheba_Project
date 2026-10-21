@@ -1,7 +1,7 @@
 /*
  * Design tokens, derived from the official Sheba logo (assets/logo.svg) and the
- * visual language of sheba.co.il: deep navy, pink and teal accents, pale blue ground,
- * pill-shaped controls and soft navy-tinted shadows.
+ * visual language of sheba.co.il: deep navy, pink and teal accents, pale blue ground
+ * shared by the page and the top bar, pill-shaped controls and soft navy-tinted shadows.
  */
 :root {
   /* Brand */
@@ -23,13 +23,14 @@
   --teal-50: #e6f8f3;
 
   /* Neutrals */
+  --ink-black: #1e1e1e; /* sheba.co.il text and outline buttons */
   --ink-900: #1e1e2e;
   --ink-700: #3f4058;
   --ink-500: #5f5e6e;
   --ink-300: #a6a8bd;
   --line: #e6e8f2;
   --line-strong: #d2d5e6;
-  --bg: #f3f5fa;
+  --bg: #f2f5f9; /* sheba.co.il page and header ground */
   --surface: #ffffff;
 
   /* States */
@@ -46,13 +47,15 @@
   /* Type. sheba.co.il uses the licensed "Simpler" font; Heebo is the closest free match.
      If the lab supplies Simpler, add its @font-face and put it first here. */
   --font: 'Heebo Variable', 'Heebo', 'Segoe UI', Arial, sans-serif;
-  --text-xs: 0.8125rem;
-  --text-sm: 0.875rem;
-  --text-md: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.75rem;
-  --text-2xl: 2.25rem;
-  --text-hero: clamp(2.25rem, 1.4rem + 2.6vw, 3.75rem);
+  /* A working tool, so a step below the public site: 14px body, 24px page titles. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.875rem;
+  --text-nav: 0.9375rem;
+  --text-lg: 1rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 1.875rem;
+  --text-hero: clamp(2rem, 1.3rem + 2.2vw, 3.25rem);
 
   /* Space */
   --s-1: 4px;

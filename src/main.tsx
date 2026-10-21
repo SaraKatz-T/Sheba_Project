@@ -10,6 +10,7 @@ import './styles/records.css'
 import './styles/capture.css'
 import './styles/review.css'
 import './styles/overview.css'
+import './styles/rings.css'
 
 async function start() {
   if (import.meta.env.VITE_USE_MOCK === 'true') {

@@ -1,7 +1,8 @@
-import { CircleAlert, ClipboardCheck, Inbox, LoaderCircle, RefreshCw } from 'lucide-react'
+import { CircleAlert, ClipboardCheck, Inbox, RefreshCw } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useDismissals, useForms } from '../api/queries'
+import { BrandRings, RingsLoader } from '../components/BrandRings'
 import { EmptyState } from '../components/EmptyState'
 import { formatNumber } from '../lib/format'
 import { useNow } from '../lib/useNow'
@@ -44,6 +45,7 @@ export function OverviewPage() {
 
   return (
     <>
+      <BrandRings className="page-rings" />
       <div className="page-head">
         <div>
           <h1>סקירה</h1>
@@ -75,7 +77,7 @@ export function OverviewPage() {
 
       {forms.isPending ? (
         <div className="records-loading" role="status">
-          <LoaderCircle size={22} className="spin" aria-hidden="true" />
+          <RingsLoader />
           טוען…
         </div>
       ) : forms.isError ? (

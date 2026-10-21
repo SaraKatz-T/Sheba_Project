@@ -17,7 +17,7 @@ interface ColumnDef {
 
 const COLUMNS: ColumnDef[] = [
   { key: 'working', title: 'בקליטה', statuses: ['received', 'processing'], oldestFirst: true, empty: 'אין טפסים בעיבוד' },
-  { key: 'pending', title: 'ממתין לבדיקה', statuses: ['pending_review'], oldestFirst: true, empty: 'אין טפסים ממתינים 🎉' },
+  { key: 'pending', title: 'ממתין לבדיקה', statuses: ['pending_review'], oldestFirst: true, empty: 'אין טפסים ממתינים' },
   { key: 'approved', title: 'אושר', statuses: ['approved'], oldestFirst: false, empty: 'עוד לא אושרו טפסים' },
   { key: 'failed', title: 'נכשל', statuses: ['failed'], oldestFirst: false, empty: 'אין כשלים' },
   { key: 'rejected', title: 'נדחה', statuses: ['rejected'], oldestFirst: false, empty: 'אין טפסים שנדחו' },

@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
-import { FlaskConical, LayoutDashboard, LoaderCircle, LogOut, Table2, Upload } from 'lucide-react'
-import { useEffect } from 'react'
+import { FlaskConical, LogOut } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router'
 import { logout } from '../api/endpoints'
 import { startLive, stopLive } from '../api/live'
@@ -27,8 +27,21 @@ function usePreventStrayDrops() {
   }, [])
 }
 
+/** True once the page has scrolled, so the top bar can show its hairline. */
+function useScrolled() {
+  const [scrolled, setScrolled] = useState(false)
+  useEffect(() => {
+    const update = () => setScrolled(window.scrollY > 4)
+    update()
+    window.addEventListener('scroll', update, { passive: true })
+    return () => window.removeEventListener('scroll', update)
+  }, [])
+  return scrolled
+}
+
 export function AppShell() {
   const navigate = useNavigate()
+  const scrolled = useScrolled()
   const forms = useForms()
   const uploads = useUploads()
   const local = useLocalQueue()
@@ -61,20 +74,11 @@ export function AppShell() {
       <a className="skip-link" href="#main">
         דילוג לתוכן הראשי
       </a>
-      <header className="topbar">
+      <header className={`topbar${scrolled ? ' is-scrolled' : ''}`}>
         <div className="topbar-inner">
           <Brand />
           <nav className="nav" aria-label="ניווט ראשי">
-            <NavLink to="/" end className="nav-link">
-              <LayoutDashboard size={18} aria-hidden="true" />
-              סקירה
-            </NavLink>
             <NavLink to="/intake" className="nav-link">
-              {intakeBusy > 0 ? (
-                <LoaderCircle size={18} className="spin" aria-hidden="true" />
-              ) : (
-                <Upload size={18} aria-hidden="true" />
-              )}
               קליטה
               {intakeBusy > 0 && (
                 <span className="badge badge-busy" aria-label={`${intakeBusy} קבצים בטיפול`}>
@@ -83,7 +87,6 @@ export function AppShell() {
               )}
             </NavLink>
             <NavLink to="/records" className="nav-link">
-              <Table2 size={18} aria-hidden="true" />
               רשומות
               {pending > 0 && (
                 <span className="badge" aria-label={`${pending} ממתינים לבדיקה`}>
@@ -101,7 +104,7 @@ export function AppShell() {
             )}
             <button
               type="button"
-              className="btn btn-quiet"
+              className="btn btn-outline"
               onClick={() => signOut.mutate()}
               disabled={signOut.isPending}
             >

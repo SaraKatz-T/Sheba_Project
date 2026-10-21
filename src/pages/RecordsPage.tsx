@@ -1,8 +1,9 @@
-import { CircleAlert, CircleCheck, ClipboardCheck, Columns3, Inbox, LoaderCircle, RefreshCw, SearchX, Table2 } from 'lucide-react'
+import { CircleAlert, CircleCheck, ClipboardCheck, Columns3, Inbox, RefreshCw, SearchX, Table2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useDismissals, useForms } from '../api/queries'
 import type { FormStatus } from '../api/types'
+import { RingsLoader } from '../components/BrandRings'
 import { EmptyState } from '../components/EmptyState'
 import { ExportMenu } from '../export/ExportMenu'
 import { formatNumber } from '../lib/format'
@@ -50,7 +51,7 @@ export function RecordsPage() {
 
   const pendingCount = useMemo(() => all.filter((f) => f.status === 'pending_review').length, [all])
 
-  // After approving or rejecting, the next waiting record in the table opens by itself.
+  // After approving or rejecting, the record closes; this only tells the toast whether others are still waiting.
   const nextPending = (afterId: string) => {
     const i = visible.findIndex((f) => f.id === afterId)
     const isNext = (f: (typeof visible)[number]) => f.status === 'pending_review' && f.id !== afterId
@@ -105,10 +106,7 @@ export function RecordsPage() {
             ממתינים לבדיקה
             {pendingCount > 0 && <span className="badge">{formatNumber(pendingCount)}</span>}
           </button>
-          <ExportMenu
-            forms={filters.view === 'board' ? sortForms(applyFilters(all, filters), filters.sort, filters.dir) : visible}
-            onDone={(text) => setToast({ text, n: Date.now() })}
-          />
+          <ExportMenu forms={all} onDone={(text) => setToast({ text, n: Date.now() })} />
           <div className="segmented" role="group" aria-label="תצוגה">
             <button type="button" aria-pressed={filters.view === 'table'} onClick={() => update({ view: 'table' })}>
               <Table2 size={16} aria-hidden="true" />
@@ -140,7 +138,7 @@ export function RecordsPage() {
 
       {forms.isPending ? (
         <div className="records-loading" role="status">
-          <LoaderCircle size={22} className="spin" aria-hidden="true" />
+          <RingsLoader />
           טוען את הרשומות…
         </div>
       ) : forms.isError ? (
@@ -160,6 +158,7 @@ export function RecordsPage() {
         <EmptyState
           icon={<Inbox size={26} />}
           title="עוד לא נקלטו טפסים"
+          rings
           action={
             <Link className="btn btn-primary" to="/intake">
               לקליטת טפסים
@@ -173,9 +172,10 @@ export function RecordsPage() {
           icon={<SearchX size={26} />}
           title={
             filters.statuses.length === 1 && filters.statuses[0] === 'pending_review'
-              ? 'אין טפסים ממתינים 🎉'
+              ? 'אין טפסים ממתינים'
               : 'לא נמצאו טפסים שמתאימים לסינון'
           }
+          rings={filters.statuses.length === 1 && filters.statuses[0] === 'pending_review'}
           action={
             <button
               type="button"
@@ -212,8 +212,8 @@ export function RecordsPage() {
               id={id}
               nextPending={nextPending}
               onDone={(next, message) => {
-                setToast({ text: next ? message : `${message} · אין עוד טפסים ממתינים 🎉`, n: Date.now() })
-                update({ open: next })
+                setToast({ text: next ? message : `${message} · אין עוד טפסים ממתינים`, n: Date.now() })
+                update({ open: null })
               }}
               onClose={() => update({ open: null })}
             />

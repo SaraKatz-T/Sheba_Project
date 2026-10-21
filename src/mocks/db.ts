@@ -137,6 +137,7 @@ export function pageImage(form: StoredForm, page: number): Blob | null {
 
 function recount(form: StoredForm) {
   form.uncertain_count = form.fields.filter((f) => f.uncertain).length
+  form.uncertain_keys = form.fields.filter((f) => f.uncertain).map((f) => f.key)
   form.corrected_count = form.fields.filter((f) => f.corrected).length
   const get = (key: string) => form.fields.find((f) => f.key === key)?.value || null
   form.commitment_number = get('commitment_number')
@@ -279,6 +280,7 @@ function newForm(upload: StoredUpload, pageNumbers: number[], seed: number): Sto
     form_date: null,
     page_count: pageNumbers.length,
     uncertain_count: 0,
+    uncertain_keys: [],
     corrected_count: 0,
     progress: { percent: 0, step: 'ממתין בתור' },
     error: null,

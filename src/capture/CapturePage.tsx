@@ -17,6 +17,7 @@ import { useParams } from 'react-router'
 import { ApiError } from '../api/client'
 import { checkCaptureSession, uploadCapture } from '../api/endpoints'
 import { Logo } from '../components/Brand'
+import { RingsLoader } from '../components/BrandRings'
 import { formatNumber } from '../lib/format'
 import { sha256Hex } from '../lib/sha256'
 import { CornerEditor } from './CornerEditor'
@@ -146,7 +147,7 @@ export function CapturePage() {
   if (session.isPending) {
     body = (
       <p className="cap-center" role="status">
-        <LoaderCircle size={28} className="spin" aria-hidden="true" />
+        <RingsLoader size={40} />
         מתחבר…
       </p>
     )
@@ -261,7 +262,7 @@ export function CapturePage() {
         )}
         {step.kind === 'sent' && (
           <>
-            <p className="cap-status cap-ok" role="status">
+            <p key={sentCount} className="cap-status cap-ok rise" role="status">
               <CircleCheck size={22} aria-hidden="true" />
               נשלח. הטופס מופיע עכשיו במחשב.
             </p>

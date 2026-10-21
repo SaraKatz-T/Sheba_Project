@@ -1,14 +1,14 @@
 import { QueryClientProvider } from '@tanstack/react-query'
-import { CircleAlert, LoaderCircle, RefreshCw } from 'lucide-react'
+import { CircleAlert, RefreshCw } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router'
 import { queryClient, useSession } from './api/queries'
 import { CapturePage } from './capture/CapturePage'
 import { AppShell } from './components/AppShell'
+import { RingsLoader } from './components/BrandRings'
 import { EmptyState } from './components/EmptyState'
 import { IntakePage } from './pages/IntakePage'
 import { LoginPage } from './pages/LoginPage'
-import { OverviewPage } from './pages/OverviewPage'
 import { RecordsPage } from './pages/RecordsPage'
 
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -18,7 +18,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
   if (session.isPending) {
     return (
       <div className="center-screen" role="status">
-        <LoaderCircle size={28} className="spin" aria-hidden="true" />
+        <RingsLoader size={40} />
         <span className="visually-hidden">טוען…</span>
       </div>
     )
@@ -72,7 +72,7 @@ export function App() {
               </RequireAuth>
             }
           >
-            <Route index element={<OverviewPage />} />
+            <Route index element={<Navigate to="/records" replace />} />
             <Route path="intake" element={<IntakePage />} />
             <Route path="records" element={<RecordsPage />} />
             {/* Review happens inside the records now; old links still land on the right record. */}
