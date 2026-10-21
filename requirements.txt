@@ -3,3 +3,8 @@ python-dotenv
 pypdfium2
 pillow
 truststore
+fastapi
+uvicorn[standard]
+python-multipart
+pytesseract
+pillow-heif

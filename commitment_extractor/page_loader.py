@@ -9,7 +9,13 @@ from PIL import Image
 
 from . import config
 
-IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".webp"}
+try:
+    import pillow_heif
+    pillow_heif.register_heif_opener()  # מאפשר ל-Pillow לפתוח HEIC/HEIF (צילומי אייפון)
+except ImportError:
+    pass
+
+IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".webp", ".heic", ".heif"}
 SUPPORTED_SUFFIXES = IMAGE_SUFFIXES | {".pdf"}
 
 

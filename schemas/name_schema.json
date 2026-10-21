@@ -1,0 +1,75 @@
+{
+  "type": "object",
+  "properties": {
+    "first_name": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string"
+        },
+        "raw_text": {
+          "type": "string"
+        },
+        "found": {
+          "type": "boolean"
+        },
+        "confidence": {
+          "type": "string",
+          "enum": [
+            "high",
+            "good",
+            "medium",
+            "low"
+          ]
+        },
+        "issue": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "raw_text",
+        "found",
+        "confidence",
+        "issue"
+      ]
+    },
+    "last_name": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string"
+        },
+        "raw_text": {
+          "type": "string"
+        },
+        "found": {
+          "type": "boolean"
+        },
+        "confidence": {
+          "type": "string",
+          "enum": [
+            "high",
+            "good",
+            "medium",
+            "low"
+          ]
+        },
+        "issue": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "raw_text",
+        "found",
+        "confidence",
+        "issue"
+      ]
+    }
+  },
+  "required": [
+    "first_name",
+    "last_name"
+  ]
+}

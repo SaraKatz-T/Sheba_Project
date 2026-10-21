@@ -9,5 +9,13 @@ __pycache__/
 # טפסים ותוצאות - מכילים פרטים אישיים
 data/input/*
 data/output/*
+data/ready/
 !data/input/.gitkeep
 !data/output/.gitkeep
+
+# מסד הנתונים והקבצים של השרת - מכילים פרטים אישיים
+storage/
+storage.backup-*/
+
+# סביבת הפייתון של הפרויקט
+venv/

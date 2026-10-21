@@ -31,7 +31,60 @@ sender — the health fund or hospital that SENT the sample.
 For a health-fund commitment, the sender is the fund (כללית / מכבי / מאוחדת / לאומית), usually from the logo/header.
 For a hospital form, the sender is the hospital (e.g. שמיר, בני ציון, ברזילי, רמב"ם, שניידר, הלל יפה, קפלן).
 NOT: the receiving lab — "נותן השירות", "לכבוד", "המעבדה המרכזית לנגיפים", "ביה"ח תל השומר / שיבא" when it appears as the service provider or addressee.
-Write the sender's name as it appears; normalization to the closed list is done in code.
+`value` MUST be copied character-for-character from this CLOSED LIST — one full line, nothing else:
+כללית
+מכבי
+מאוחדת
+לאומית
+המרכז הרפואי ע"ש חיים שיבא - תל השומר
+המרכז הרפואי תל אביב ע"ש סוראסקי (איכילוב)
+המרכז הרפואי ע"ש אדית וולפסון
+המרכז הרפואי הלל יפה
+רמב"ם - הקריה הרפואית לבריאות האדם
+מרכז רפואי בני ציון
+המרכז הרפואי לגליל
+המרכז הרפואי זיו
+המרכז הרפואי צפון - פוריה
+מרכז רפואי ברזילי
+המרכז הרפואי שמיר – אסף הרופא
+המרכז הרפואי האוניברסיטאי סורוקה
+מרכז רפואי רבין - קמפוס בילינסון
+מרכז רפואי רבין - קמפוס גולדה השרון
+מרכז שניידר לרפואת ילדים בישראל
+המרכז הרפואי כרמל
+מרכז רפואי העמק
+מרכז רפואי מאיר
+מרכז רפואי קפלן
+המרכז הרפואי יוספטל
+מרכז רפואי הדסה - בית החולים עין כרם
+מרכז רפואי הדסה - בית החולים הר הצופים
+המרכז הרפואי שערי צדק
+בית החולים אוגוסטה ויקטוריה
+בית החולים סנט ג'וזף
+בית החולים אל-מקאסד
+לניאדו - מרכז רפואי צאנז
+בית החולים האוניברסיטאי אסותא אשדוד
+מרכז רפואי מעיני הישועה
+בית החולים האיטלקי (חיפה)
+בית החולים נצרת (האנגלי)
+בית החולים המשפחה ה"קדושה" (האיטלקי)
+בית החולים סן ונסן דה פול (הצרפתי)
+בית החולים אסותא רמת החייל
+בית החולים אסותא חיפה
+בית החולים אסותא ראשון לציון
+בית החולים אסותא באר שבע
+המרכז הרפואי אסותא ירושלים
+המרכז הרפואי אסותא השלום-תל אביב
+המרכז הרפואי אסותא אשדוד-כלניות
+המרכז הרפואי אסותא רעננה
+הרצליה מדיקל סנטר
+בית החולים אלישע
+בית החולים רפאל
+משגב לדך
+Map short or alternative names on the form to the matching list entry (e.g. "שירותי בריאות כללית" → כללית, "איכילוב" → המרכז הרפואי תל אביב ע"ש סוראסקי (איכילוב), "בילינסון" → מרכז רפואי רבין - קמפוס בילינסון, "אסף הרופא" → המרכז הרפואי שמיר – אסף הרופא).
+Put the sender exactly as written on the form in `raw_text`.
+If the sender is visible but does not clearly match any list entry, or could match more than one entry (e.g. "אסותא" with no branch, "הדסה" with no campus, "רבין" with no campus): value = "", found = true, confidence "low", and describe it in `issue` (e.g. "not in list", "branch unclear").
+Never write a name that is not in the list.
 commitment_numbers — the commitment / request number.
 Labels: "התחייבות", "מספר התחייבות", "מס' התחייבות", "דרישה", "מס' דרישה"; in לאומית also "דגימה" / the "מספר התחייבות" column in the system screen.
 Return every one on the page.
@@ -40,6 +93,13 @@ Each field object
 `value`: normalized value (digits only for numbers; DD/MM/YYYY for dates), or "" if not found.
 `raw_text`: exactly what is visible, before normalization, or "".
 `found`: false if the field does not appear or is unreadable. Then value = "".
-`confidence`: "high" (clearly printed, unambiguous), "medium" (handwritten but clear, or slightly ambiguous label), "low" (partly illegible, cropped, conflicting candidates).
+`confidence` — one of four levels. "high" and "good" are accepted as is; "medium" and "low" are sent to the technician to check, so use them only when there is a real doubt about the value:
+- "high": clearly printed, right label, unambiguous.
+- "good": handwritten but every character is clearly legible, or the label is informal / slightly ambiguous but it is clearly the right field. You are sure of the value.
+- "medium": a real doubt about one or two characters (e.g. 1/7, 3/8, ו/י), or about whether this is the right field.
+- "low": partly illegible, cropped, faint, or conflicting candidates.
 `issue`: short note when confidence is not high (e.g. "handwritten", "sticker cut", "two candidates", "digit 7/1 unclear"), else "".
+`box` (every field except the names): location of the value on the page, [ymin, xmin, ymax, xmax] as integers 0–1000 relative to the page image exactly as given (before any rotation) — the same format as `name_box`. Cover the value together with its label when the label is right next to it. For each central number / commitment number, the box of that specific number. Return [] if the field is not found.
 Never complete a partially visible number. If two different candidates exist for a single-valued field, choose none: return the clearest with confidence "low" and describe the conflict in `issue`.
+name_box — location of the patient's name on the page (used to crop and enlarge it).
+Return [ymin, xmin, ymax, xmax] of the area that contains the patient's first and last name together with their labels, as integers normalized to 0–1000 relative to the page image exactly as given (before any rotation). Return [] if no patient name appears.
