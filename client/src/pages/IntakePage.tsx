@@ -1,4 +1,4 @@
-import { CircleCheck, Inbox, Radio, WifiOff } from 'lucide-react'
+import { CircleCheck, Inbox, WifiOff } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { useLiveStatus } from '../api/liveStatus'
@@ -137,7 +137,7 @@ export function IntakePage() {
       <div className="page-head">
         <div>
           <h1>קליטה</h1>
-          <p>גוררים לכאן טפסים סרוקים, מצולמים או צילומי מסך. המערכת מפצלת, מחלצת ומסמנת מה צריך בדיקה.</p>
+          <p>קליטת טפסי התחייבות סרוקים או מצולמים. המערכת מפרידה כל קובץ לטפסים, מחלצת את הנתונים ומסמנת שדות הדורשים בדיקה.</p>
         </div>
       </div>
 
@@ -157,10 +157,12 @@ export function IntakePage() {
             <h2 id="queue-active">בטיפול</h2>
             {summary.length > 0 && <span className="queue-summary">{summary.join(' · ')}</span>}
             {overallEta && <span className="queue-eta">סיום משוער: {formatEta(overallEta, now)}</span>}
-            <span className={`live-dot live-${live}`} title="עדכונים מהשרת">
-              {live === 'offline' ? <WifiOff size={14} aria-hidden="true" /> : <Radio size={14} aria-hidden="true" />}
-              {live === 'open' ? 'עדכונים חיים' : live === 'connecting' ? 'מתחבר…' : 'אין חיבור חי, מתעדכן כל כמה שניות'}
-            </span>
+            {live === 'offline' && (
+              <span className="live-dot live-offline">
+                <WifiOff size={14} aria-hidden="true" />
+                אין חיבור חי, מתעדכן כל כמה שניות
+              </span>
+            )}
           </header>
           <ul className="up-list">
             {active.map(({ row, view }) => (

@@ -60,7 +60,11 @@ class FormSummary(BaseModel):
     reviewed_at: str | None
     commitment_number: str | None
     person_name: str | None
+    first_name: str | None = None      # כל השדות מוצגים בטבלה, גם בשורה סגורה
+    last_name: str | None = None
     id_number: str | None
+    central_number: str | None = None
+    sender: str | None = None
     form_date: str | None
     page_count: int
     uncertain_count: int

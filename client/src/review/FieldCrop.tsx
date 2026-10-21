@@ -10,18 +10,27 @@ interface Props {
   onOpen: () => void
 }
 
-/** The box plus a little context, clamped to the page. */
-function cropRegion(box: Box) {
-  const padX = Math.max(box.w * 0.08, 0.02)
-  const padY = Math.max(box.h * 0.6, 0.012)
+/** The box grown by the given padding on each side, clamped to the page. */
+function grow(box: Box, padX: number, padY: number): Box {
   const x = Math.max(0, box.x - padX)
   const y = Math.max(0, box.y - padY)
   return {
+    page: box.page,
     x,
     y,
     w: Math.min(1, box.x + box.w + padX) - x,
     h: Math.min(1, box.y + box.h + padY) - y,
   }
+}
+
+/** The yellow frame: a bit wider than the AI's box, so it doesn't run over the letters. */
+export function markRegion(box: Box) {
+  return grow(box, box.w * 0.03, box.h * 0.25)
+}
+
+/** What the crop shows: the frame plus generous context. */
+function cropRegion(mark: Box) {
+  return grow(mark, Math.max(mark.w * 0.15, 0.03), Math.max(mark.h * 1.5, 0.035))
 }
 
 /**
@@ -30,7 +39,8 @@ function cropRegion(box: Box) {
  */
 export function FieldCrop({ page, box, label, cache, onOpen }: Props) {
   const image = useCachedImage(cache, page.image_url)
-  const r = cropRegion(box)
+  const mark = markRegion(box)
+  const r = cropRegion(mark)
   const pct = (v: number) => `${v * 100}%`
 
   return (
@@ -59,10 +69,10 @@ export function FieldCrop({ page, box, label, cache, onOpen }: Props) {
           <span
             className="crop-mark"
             style={{
-              left: pct((box.x - r.x) / r.w),
-              top: pct((box.y - r.y) / r.h),
-              width: pct(box.w / r.w),
-              height: pct(box.h / r.h),
+              left: pct((mark.x - r.x) / r.w),
+              top: pct((mark.y - r.y) / r.h),
+              width: pct(mark.w / r.w),
+              height: pct(mark.h / r.h),
             }}
           />
           <span className="crop-zoom" aria-hidden="true">

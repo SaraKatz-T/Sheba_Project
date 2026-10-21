@@ -11,14 +11,11 @@ import {
   TriangleAlert,
   X,
 } from 'lucide-react'
-import { Link } from 'react-router'
 import { retryForm, retryUpload } from '../api/endpoints'
 import { upsertForm, upsertUpload } from '../api/queries'
 import type { FormSummary } from '../api/types'
 import { formatBytes } from '../lib/files'
-import { YellowChip } from '../components/StatusChip'
-import { formatEta, formatPages } from '../lib/format'
-import { recordLink } from '../records/filters'
+import { formatEta } from '../lib/format'
 import { useAuthedImage } from '../lib/useAuthedImage'
 import { formPercent, type Row, type RowView, type Tone } from './rows'
 import { removeItem, retryItem, sendAnyway } from './uploadQueue'
@@ -64,59 +61,24 @@ function Thumb({ row }: { row: Row }) {
   )
 }
 
-function FormState({ form }: { form: FormSummary }) {
-  switch (form.status) {
-    case 'received':
-    case 'processing':
-      return (
-        <span className="form-progress">
-          <Bar value={formPercent(form)} tone="busy" label={`התקדמות הטופס`} />
-          <span className="muted">{form.progress?.step ?? 'בעיבוד'}</span>
-        </span>
-      )
-    case 'pending_review':
-      return form.uncertain_count > 0 ? <YellowChip count={form.uncertain_count} /> : <span className="chip chip-ok">מוכן</span>
-    case 'approved':
-      return <span className="chip chip-ok">אושר</span>
-    case 'rejected':
-      return <span className="chip chip-muted">נדחה</span>
-    case 'failed':
-      return (
+/**
+ * While reading, each form shows only its number and a progress bar. Its details
+ * (numbers, names, fields to check) are shown in the records page once it's done.
+ */
+function FormLine({ form, index }: { form: FormSummary; index: number }) {
+  const retry = useMutation({ mutationFn: () => retryForm(form.id), onSuccess: upsertForm })
+  const done = !IN_FLIGHT.has(form.status) && form.status !== 'failed'
+  return (
+    <li className="up-form">
+      <span className="up-form-title">טופס {index + 1}</span>
+      {form.status === 'failed' ? (
         <span className="form-failed">
           <span className="chip chip-error">נכשל</span>
-          <span className="muted">{form.error}</span>
         </span>
-      )
-  }
-}
-
-function FormLine({ form, index, compact }: { form: FormSummary; index: number; compact: boolean }) {
-  const retry = useMutation({ mutationFn: () => retryForm(form.id), onSuccess: upsertForm })
-  return (
-    <li className={compact ? 'up-form up-form-compact' : 'up-form'}>
-      {!compact && (
-        <span className="up-form-title">
-          טופס {index + 1}
-          <span className="muted"> · {formatPages(form.upload_pages)}</span>
-        </span>
+      ) : (
+        <Bar value={done ? 100 : formPercent(form)} tone={done ? 'ok' : 'busy'} label={`התקדמות טופס ${index + 1}`} />
       )}
-      <span className="up-form-person">
-        {form.commitment_number || form.person_name ? (
-          <>
-            {form.commitment_number && <strong className="ltr num">{form.commitment_number}</strong>}
-            {form.person_name && <span className="muted">{form.person_name}</span>}
-          </>
-        ) : (
-          <span className="muted">—</span>
-        )}
-      </span>
-      <FormState form={form} />
       <span className="up-form-action">
-        {form.status === 'pending_review' && (
-          <Link className="btn btn-sm btn-soft" to={recordLink(form.id)}>
-            לבדיקה
-          </Link>
-        )}
         {form.status === 'failed' && (
           <button type="button" className="btn btn-sm btn-outline" onClick={() => retry.mutate()} disabled={retry.isPending}>
             <RotateCcw size={15} aria-hidden="true" />
@@ -164,11 +126,11 @@ export function UploadRow({ row, view, now }: { row: Row; view: RowView; now: nu
           <Bar value={view.progress} tone={view.tone} label={`התקדמות ${row.name}`} />
         )}
 
-        {/* A single form still being read is already described by the row's own status. */}
-        {(forms.length > 1 || (forms.length === 1 && !IN_FLIGHT.has(forms[0].status))) && (
+        {/* A single form is already described by the row's own status, unless it failed. */}
+        {(forms.length > 1 || (forms.length === 1 && forms[0].status === 'failed')) && (
           <ul className={forms.length > 1 ? 'up-forms' : 'up-forms up-forms-single'}>
             {forms.map((f, i) => (
-              <FormLine key={f.id} form={f} index={i} compact={forms.length === 1} />
+              <FormLine key={f.id} form={f} index={i} />
             ))}
           </ul>
         )}

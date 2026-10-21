@@ -61,7 +61,9 @@ def _summary(row, fields) -> FormSummary:
         received_at=row["received_at"], updated_at=row["updated_at"], reviewed_at=row["reviewed_at"],
         commitment_number=value("commitment_number"),
         person_name=" ".join(names) or None,
+        first_name=value("first_name"), last_name=value("last_name"),
         id_number=value("id_number"),
+        central_number=value("central_numbers"), sender=value("sender"),
         form_date=_iso_date(value("received_date")),
         page_count=1,   # טופס הוא תמיד עמוד אחד
         uncertain_count=sum(1 for f in fields if f["uncertain"]),

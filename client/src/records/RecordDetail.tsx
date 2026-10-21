@@ -4,6 +4,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Check, CircleAlert, LoaderCircle, RotateCcw, X, ZoomIn } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { Link } from 'react-router'
 import { approveForm, getForm, retryForm, updateField } from '../api/endpoints'
 import { keys, queryClient, upsertForm } from '../api/queries'
@@ -80,13 +81,16 @@ export function RecordDetail({ id, nextPending, onDone, onClose }: Props) {
     }
   }, [form, reviewKeys])
 
-  const reviewFields = useMemo(
+  // A field approved or corrected on its own moves down to the plain fields.
+  const [moved, setMoved] = useState<Set<string>>(() => new Set())
+  const markFields = useMemo(
     () => (form && reviewKeys ? reviewKeys.map((k) => form.fields.find((f) => f.key === k)!).filter(Boolean) : []),
     [form, reviewKeys],
   )
+  const reviewFields = useMemo(() => markFields.filter((f) => !moved.has(f.key)), [markFields, moved])
   const plainFields = useMemo(
-    () => (form && reviewKeys ? form.fields.filter((f) => !reviewKeys.includes(f.key)) : []),
-    [form, reviewKeys],
+    () => (form ? form.fields.filter((f) => !reviewFields.some((r) => r.key === f.key)) : []),
+    [form, reviewFields],
   )
   const unresolved = reviewFields.filter((f) => f.uncertain)
 
@@ -98,16 +102,43 @@ export function RecordDetail({ id, nextPending, onDone, onClose }: Props) {
   const [showKeys, setShowKeys] = useState(false)
 
   const saveField: SaveField = async (key, value, source) => {
-    const p = updateField(id, key, value, source).then((field) => {
+    const p = updateField(id, key, value, source).then(async (field) => {
       queryClient.setQueryData<FormDetail>(keys.form(id), (old) =>
         old ? withCounts({ ...old, fields: old.fields.map((f) => (f.key === key ? field : f)) }) : old,
       )
+      if (!field.uncertain) {
+        // Let the new value reach the screen first, then glide the field down.
+        await new Promise((r) => setTimeout(r, 0))
+        moveDown(key)
+      }
     })
     pendingSaves.current.add(p)
     try {
       await p
     } finally {
       pendingSaves.current.delete(p)
+    }
+  }
+
+  const moveDown = (key: string) => {
+    // The browser may skip or hold back the glide animation (for example when another one is
+    // running), so the move itself must not depend on it: it happens anyway shortly after.
+    let done = false
+    const update = () => {
+      if (done) return
+      done = true
+      flushSync(() => setMoved((prev) => new Set(prev).add(key)))
+    }
+    const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown }
+    if (doc.startViewTransition && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      try {
+        doc.startViewTransition(update)
+      } catch {
+        update()
+      }
+      setTimeout(update, 400)
+    } else {
+      update()
     }
   }
 
@@ -131,8 +162,11 @@ export function RecordDetail({ id, nextPending, onDone, onClose }: Props) {
     el?.select()
   }
   const navigate = (fromKey: string, dir: Direction) => {
-    const order = reviewKeys ?? []
-    const target = order[order.indexOf(fromKey) + (dir === 'next' ? 1 : -1)]
+    // The next field still waiting; approved ones have moved down and are skipped.
+    const order = reviewFields.map((f) => f.key)
+    const i = order.indexOf(fromKey)
+    const rest = dir === 'next' ? order.slice(i + 1) : order.slice(0, Math.max(i, 0)).reverse()
+    const target = rest.find((k) => form?.fields.find((f) => f.key === k)?.uncertain)
     if (target) focusField(target)
     else if (dir === 'next') approveRef.current?.focus()
   }
@@ -260,7 +294,7 @@ export function RecordDetail({ id, nextPending, onDone, onClose }: Props) {
         {plainFields.length > 0 && (
           <dl className="pfields">
             {plainFields.map((f) => (
-              <PlainField key={f.key} field={f} />
+              <PlainField key={f.key} field={f} onSave={pending ? saveField : undefined} />
             ))}
           </dl>
         )}
@@ -301,7 +335,7 @@ export function RecordDetail({ id, nextPending, onDone, onClose }: Props) {
         <button type="button" className="icon-btn detail-close" onClick={onClose} aria-label="סגירת הרשומה" title="סגירה (Esc)">
           <X size={18} />
         </button>
-        <FormThumb form={form} marks={reviewFields} cache={cache} onOpen={() => showViewer(reviewFields.find((f) => f.uncertain && f.box)?.key ?? null)} />
+        <FormThumb form={form} marks={markFields} cache={cache} onOpen={() => showViewer(reviewFields.find((f) => f.uncertain && f.box)?.key ?? null)} />
       </aside>
 
       {viewer && (

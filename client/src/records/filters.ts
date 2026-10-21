@@ -12,7 +12,8 @@ export const ALL_STATUSES: FormStatus[] = [
   'rejected',
 ]
 
-export type SortKey = 'commitment' | 'name' | 'id' | 'form_date' | 'received' | 'status' | 'uncertain'
+/** 'name' sorts by last name. */
+export type SortKey = 'commitment' | 'name' | 'first_name' | 'id' | 'form_date' | 'received' | 'status' | 'uncertain'
 export type View = 'table' | 'board'
 
 export interface Filters {
@@ -28,7 +29,7 @@ export interface Filters {
   open: string | null
 }
 
-const SORT_KEYS: SortKey[] = ['commitment', 'name', 'id', 'form_date', 'received', 'status', 'uncertain']
+const SORT_KEYS: SortKey[] = ['commitment', 'name', 'first_name', 'id', 'form_date', 'received', 'status', 'uncertain']
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/
 
 export function readFilters(params: URLSearchParams): Filters {
@@ -104,7 +105,12 @@ function compare(a: FormSummary, b: FormSummary, key: SortKey): number {
         numeric: true,
       })
     case 'name':
-      return hebrew.compare(a.person_name ?? '￿', b.person_name ?? '￿')
+      return (
+        hebrew.compare(a.last_name || '￿', b.last_name || '￿') ||
+        hebrew.compare(a.first_name || a.person_name || '￿', b.first_name || b.person_name || '￿')
+      )
+    case 'first_name':
+      return hebrew.compare(a.first_name || '￿', b.first_name || '￿')
     case 'id':
       return (a.id_number ?? '￿').localeCompare(b.id_number ?? '￿')
     case 'form_date':

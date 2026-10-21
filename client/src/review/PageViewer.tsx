@@ -1,6 +1,7 @@
 import { CircleAlert, Crosshair, LoaderCircle, Maximize, Minus, Plus, X } from 'lucide-react'
-import { useCallback, useId, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { Box, Page } from '../api/types'
+import { markRegion } from './FieldCrop'
 import { useCachedImage, type PageImageCache } from './imageCache'
 
 interface Props {
@@ -32,7 +33,11 @@ export function PageViewer({ pages, initialPage, focus, cache, onClose }: Props)
   const [animate, setAnimate] = useState(false)
   const pointers = useRef(new Map<number, { x: number; y: number }>())
   const pinch = useRef<{ dist: number; s: number } | null>(null)
-  const box = focus && focus.box.page === pageNo ? focus.box : null
+  // The same widened frame as the small crop, so it doesn't run over the letters here either
+  const box = useMemo(
+    () => (focus && focus.box.page === pageNo ? markRegion(focus.box) : null),
+    [focus, pageNo],
+  )
 
   // Open first (layout effects run in order), so the stage has a size when the view is placed.
   useLayoutEffect(() => {

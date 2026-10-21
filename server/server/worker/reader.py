@@ -18,9 +18,9 @@ from . import mapping, pause
 
 log = logging.getLogger("server.worker")
 
-STEP_PAGE = {"percent": 10, "step": "קריאה ראשונה (Gemini)"}
-STEP_NAME = {"percent": 60, "step": "קריאת השם בהגדלה"}
-STEP_PAUSED = {"percent": 0, "step": "ממתין: המכסה של Gemini נגמרה"}
+STEP_PAGE = {"percent": 10, "step": "קריאת הטופס"}
+STEP_NAME = {"percent": 60, "step": "אימות שם המטופל"}
+STEP_PAUSED = {"percent": 0, "step": "בהמתנה, העיבוד יתחדש בקרוב"}   # בלי שם המודל: המשתמש לא צריך לדעת אותו
 ERROR_FAILED = "לא הצלחנו לקרוא את העמוד. אפשר לנסות שוב."
 QUOTA_MESSAGE = "כל המפתחות נחסמו"   # השגיאה ש-GeminiExtractor זורק כשהמכסה נגמרה גם אחרי ההמתנות שלו
 

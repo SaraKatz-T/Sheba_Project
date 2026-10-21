@@ -25,7 +25,7 @@ export function DropZone({ dragging, onFiles }: Props) {
       </span>
       <p className="dz-title">{dragging ? 'שחררו כדי להוסיף לתור' : 'גררו לכאן טפסים'}</p>
       <p className="dz-sub" id={hintId}>
-        כמה שרוצים, מכל הסוגים, גם תיקייה שלמה. אפשר גם להדביק צילום מסך עם{' '}
+        ניתן לבחור קבצים בודדים, מספר קבצים או תיקייה שלמה, וכן להדביק צילום מסך באמצעות{' '}
         <kbd>Ctrl</kbd>+<kbd>V</kbd>
       </p>
       <button type="button" className="btn btn-primary" onClick={open} aria-describedby={hintId}>

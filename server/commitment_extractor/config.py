@@ -36,7 +36,8 @@ ROTATE_KEYS_EVERY_REQUEST = True   # כל בקשה נשלחת במפתח הבא 
 
 # --- זיהוי שם בהגדלה ---
 NAME_ZOOM_ENABLED = True
-NAME_CROP_PADDING = 0.5       # מרווח סביב אזור השם: 50% מגודל המלבן לכל כיוון
-NAME_CROP_MIN_PADDING = 0.03  # ולפחות 3% מגודל העמוד
+NAME_CROP_PADDING = 0.5       # מרווח לצדדים: 50% מרוחב המלבן לכל צד
+NAME_CROP_PADDING_Y = 1.5     # מרווח למעלה ולמטה: פי 1.5 מגובה המלבן, כי המלבן שמגיע מ-Gemini נמוך וחותך אותיות
+NAME_CROP_MIN_PADDING = 0.05  # ולפחות 5% מגודל העמוד לכל כיוון (היה 3%)
 NAME_CROP_UPSCALE = 2         # פי כמה להגדיל את החיתוך
 SAVE_NAME_CROPS = True        # לשמור את החיתוכים כתמונות, כדי לבדוק בעין שהם נכונים

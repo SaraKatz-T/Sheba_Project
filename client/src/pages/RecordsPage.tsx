@@ -164,9 +164,7 @@ export function RecordsPage() {
               לקליטת טפסים
             </Link>
           }
-        >
-          טפסים שייקלטו יופיעו כאן, עם הסטטוס שלהם.
-        </EmptyState>
+        />
       ) : visible.length === 0 && filters.view === 'table' ? (
         <EmptyState
           icon={<SearchX size={26} />}

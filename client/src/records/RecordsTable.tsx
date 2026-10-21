@@ -19,29 +19,45 @@ interface Column {
 
 const COLUMNS: Column[] = [
   { key: 'commitment', label: 'מספר התחייבות' },
-  { key: 'name', label: 'שם' },
+  { key: 'first_name', label: 'שם פרטי' },
+  { key: 'name', label: 'שם משפחה' },
   { key: 'id', label: 'ת"ז' },
+  { key: null, label: 'מספר מרכזי' },
+  { key: null, label: 'שולח' },
   { key: 'form_date', label: 'תאריך הטופס' },
-  { key: 'received', label: 'התקבל' },
+  // "Received" is the same for every form in a file, so it's shown once in the file's header row.
   { key: 'status', label: 'סטטוס' },
   { key: 'uncertain', label: 'לבדיקה', className: 'col-count' },
   { key: null, label: '', className: 'col-action' },
 ]
 
 // The same widths in every file's table, so the columns line up from one table to the next.
-const COLUMN_WIDTHS = ['16%', '19%', '13%', '12%', '15%', '11%', '8%', '6%']
+const COLUMN_WIDTHS = ['12%', '10%', '10%', '10%', '9%', '17%', '10%', '11%', '7%', '4%']
 
 // The field keys each column shows, so a cell turns yellow while one of them is still open.
 const CELL_KEYS = {
   commitment: ['commitment_number'],
-  name: ['first_name', 'last_name', 'full_name'],
+  first_name: ['first_name'],
+  last_name: ['last_name', 'full_name'],
   id: ['id_number'],
+  central: ['central_numbers'],
+  sender: ['sender'],
   date: ['received_date', 'form_date'],
 }
 
 function yellow(f: FormSummary, cell: keyof typeof CELL_KEYS, className = '') {
   const open = f.status === 'pending_review' && CELL_KEYS[cell].some((k) => f.uncertain_keys?.includes(k))
   return `${className}${open ? ' cell-yellow' : ''}`.trim() || undefined
+}
+
+/**
+ * An empty cell: "not found" once the form was read, a dash while it is still being read.
+ * `sent` is false when the server didn't send this field at all (an older server): that's
+ * not "not found", so it gets a dash too.
+ */
+function Missing({ form, sent = true }: { form: FormSummary; sent?: boolean }) {
+  const read = form.status !== 'received' && form.status !== 'processing' && form.status !== 'failed'
+  return <span className="muted">{read && sent ? 'לא נמצא' : '—'}</span>
 }
 
 /** Rows grouped by the file they came from, keeping the table's order. */
@@ -133,11 +149,14 @@ export function RecordsTable({ forms, sort, dir, onSort, duplicates, onShowDupli
               <span className="file-head-count">
                 {group.forms.length === 1 ? 'טופס אחד' : `${formatNumber(group.forms.length)} טפסים`}
               </span>
+              <span className="file-head-date">
+                התקבל <span className="num">{formatDateTime(file.received_at)}</span>
+              </span>
             </header>
             <div className="table-scroll">
               <table className="records">
                 <caption className="visually-hidden">
-                  טפסים מהקובץ {file.file_name}, ממוינים לפי {COLUMNS.find((c) => c.key === sort)?.label}. לחיצה על שורה
+                  טפסים מהקובץ {file.file_name}, ממוינים לפי {COLUMNS.find((c) => c.key === sort)?.label ?? 'התקבל'}. לחיצה על שורה
                   פותחת את הטופס.
                 </caption>
                 <colgroup>
@@ -149,28 +168,35 @@ export function RecordsTable({ forms, sort, dir, onSort, duplicates, onShowDupli
                 <tbody>
                   {group.forms.map((f) => {
                     const dup = duplicates.get(f.id)
-                    const open = f.id === openId
+                    const canOpen = f.status !== 'approved'
+                    const open = canOpen && f.id === openId
                     return [
                       <tr
                         key={f.id}
                         id={`row-${f.id}`}
-                        className={open ? 'is-open' : undefined}
-                        onClick={(e) => !(e.target as Element).closest('a, button:not(.row-toggle)') && onToggle(f.id)}
+                        className={open ? 'is-open' : canOpen ? undefined : 'is-final'}
+                        onClick={(e) =>
+                          canOpen && !(e.target as Element).closest('a, button:not(.row-toggle)') && onToggle(f.id)
+                        }
                       >
                         <td className={yellow(f, 'commitment')}>
                           <div className="cell-key">
-                            <button
-                              type="button"
-                              className="row-toggle"
-                              aria-expanded={open}
-                              aria-controls={open ? `detail-${f.id}` : undefined}
-                            >
-                              {f.commitment_number ? (
-                                <span className="ltr num">{f.commitment_number}</span>
-                              ) : (
-                                <span className="muted">{f.status === 'failed' ? 'לא נקרא' : 'טרם חולץ'}</span>
-                              )}
-                            </button>
+                            {canOpen ? (
+                              <button
+                                type="button"
+                                className="row-toggle"
+                                aria-expanded={open}
+                                aria-controls={open ? `detail-${f.id}` : undefined}
+                              >
+                                {f.commitment_number ? (
+                                  <span className="ltr num">{f.commitment_number}</span>
+                                ) : (
+                                  <span className="muted">{f.status === 'failed' ? 'לא נקרא' : 'טרם חולץ'}</span>
+                                )}
+                              </button>
+                            ) : (
+                              <span className="row-key ltr num">{f.commitment_number ?? '—'}</span>
+                            )}
                             {dup && (
                               <button
                                 type="button"
@@ -184,15 +210,28 @@ export function RecordsTable({ forms, sort, dir, onSort, duplicates, onShowDupli
                             )}
                           </div>
                         </td>
-                        <td className={yellow(f, 'name', 'cell-name')}>{f.person_name ?? <span className="muted">—</span>}</td>
+                        <td className={yellow(f, 'first_name', 'cell-name')}>
+                          {f.first_name || <Missing form={f} sent={f.first_name !== undefined} />}
+                        </td>
+                        <td className={yellow(f, 'last_name', 'cell-name')}>
+                          {/* A server that doesn't send the split names: the full name stays in one cell */}
+                          {(f.first_name === undefined ? f.person_name : f.last_name) || <Missing form={f} />}
+                        </td>
                         <td className={yellow(f, 'id')}>
-                          <span className="ltr num">{f.id_number ?? '—'}</span>
+                          {f.id_number ? <span className="ltr num">{f.id_number}</span> : <Missing form={f} />}
+                        </td>
+                        <td className={yellow(f, 'central')}>
+                          {f.central_number ? (
+                            <span className="ltr num">{f.central_number}</span>
+                          ) : (
+                            <Missing form={f} sent={f.central_number !== undefined} />
+                          )}
+                        </td>
+                        <td className={yellow(f, 'sender', 'cell-name')}>
+                          {f.sender || <Missing form={f} sent={f.sender !== undefined} />}
                         </td>
                         <td className={yellow(f, 'date')}>
-                          <span className="num">{f.form_date ? formatDate(f.form_date) : '—'}</span>
-                        </td>
-                        <td>
-                          <span className="num">{formatDateTime(f.received_at)}</span>
+                          {f.form_date ? <span className="num">{formatDate(f.form_date)}</span> : <Missing form={f} />}
                         </td>
                         <td>
                           <StatusChip status={f.status} />
@@ -201,7 +240,7 @@ export function RecordsTable({ forms, sort, dir, onSort, duplicates, onShowDupli
                           {f.status === 'pending_review' && <YellowChip count={f.uncertain_count} />}
                         </td>
                         <td className="col-action">
-                          <ChevronDown size={18} className="row-chevron" aria-hidden="true" />
+                          {canOpen && <ChevronDown size={18} className="row-chevron" aria-hidden="true" />}
                         </td>
                       </tr>,
                       open && (

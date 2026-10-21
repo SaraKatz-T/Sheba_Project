@@ -1,0 +1,12 @@
+# לא נכנסים לבנייה: סודות, פרטים אישיים, וקבצים שנבנים מחדש בכל מקרה
+**/.env
+**/.env.*
+!**/.env.example
+**/.idea
+**/__pycache__
+**/node_modules
+client/dist
+server/venv
+server/storage
+server/storage.backup-*
+server/data

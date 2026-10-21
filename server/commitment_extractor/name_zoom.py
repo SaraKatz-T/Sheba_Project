@@ -35,7 +35,7 @@ def crop_name_region(png_bytes: bytes, box) -> bytes | None:
 
     # מרווח נדיב: אחוז מגודל המלבן, ולפחות אחוז קטן מהעמוד - כדי לא לחתוך אותיות ולשמור את התווית
     pad_x = max((right - left) * config.NAME_CROP_PADDING, width * config.NAME_CROP_MIN_PADDING)
-    pad_y = max((bottom - top) * config.NAME_CROP_PADDING, height * config.NAME_CROP_MIN_PADDING)
+    pad_y = max((bottom - top) * config.NAME_CROP_PADDING_Y, height * config.NAME_CROP_MIN_PADDING)
     left, right = max(0, left - pad_x), min(width, right + pad_x)
     top, bottom = max(0, top - pad_y), min(height, bottom + pad_y)
 

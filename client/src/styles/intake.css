@@ -21,6 +21,17 @@
   text-align: center;
 }
 
+.phone-card {
+  transition:
+    border-color var(--base) var(--ease),
+    background-color var(--base) var(--ease);
+}
+
+.phone-card:hover {
+  border-color: var(--brand-500);
+  background: rgb(240 241 252 / 0.5);
+}
+
 .phone-card p {
   max-width: 32ch;
   color: var(--ink-500);

@@ -50,7 +50,7 @@ READ_WORKERS = int(os.getenv("READ_WORKERS", "4"))   # עמודים שנקראי
 MAX_PAGE_ATTEMPTS = 3                  # אחרי כמה ניסיונות כושלים עמוד עובר ל-failed
 RETRY_DELAYS_SECONDS = (30, 120)       # המתנה לפני הניסיון השני והשלישי
 QUOTA_PAUSE_MINUTES = 30               # כשהמכסה של Gemini נגמרת, כל התור נעצר לזמן הזה
-DEFAULT_SECONDS_PER_PAGE = 20          # הנחה לזמן משוער, עד שיש נתונים אמיתיים
+DEFAULT_SECONDS_PER_PAGE = 60          # הנחה לזמן משוער עד שיש נתונים אמיתיים (בפועל נמדדו 35-150 שניות לעמוד)
 ETA_SAMPLE_PAGES = 20                  # הזמן הממוצע לעמוד מחושב על העמודים האחרונים האלה
 
 # --- מחיקת תמונות ---

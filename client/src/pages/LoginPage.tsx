@@ -61,7 +61,6 @@ export function LoginPage() {
             ניהול טפסי התחייבות
             <span className="hero-accent">המעבדה המרכזית לנגיפים</span>
           </h1>
-          <p className="hero-lead">טפסים סרוקים, מצולמים ובכתב יד נקלטים, מחולצים ונבדקים במקום אחד.</p>
         </div>
 
         <section className="login-card rise rise-late" aria-labelledby="login-title">
@@ -79,7 +78,7 @@ export function LoginPage() {
               <input
                 ref={inputRef}
                 id={inputId}
-                className="input ltr"
+                className="input ltr password-input"
                 type={visible ? 'text' : 'password'}
                 autoComplete="current-password"
                 value={password}

@@ -77,7 +77,12 @@ export interface FormSummary {
   /** The form's own identifier, shown first everywhere. */
   commitment_number: string | null
   person_name: string | null
+  /** Every field is shown in the table, also on a closed row. Optional: older servers don't send them. */
+  first_name?: string | null
+  last_name?: string | null
   id_number: string | null
+  central_number?: string | null
+  sender?: string | null
   form_date: string | null
   page_count: number
   uncertain_count: number

@@ -81,6 +81,9 @@ NOT: the receiving lab — "נותן השירות", "לכבוד", "המעבדה 
 בית החולים אלישע
 בית החולים רפאל
 משגב לדך
+רוזנבלט מעבדה רפואית בע"מ
+המרכז הרפואי הגריאטרי שמואל הרופא
+המרכז הלאומי לרפואה משפטית
 Map short or alternative names on the form to the matching list entry (e.g. "שירותי בריאות כללית" → כללית, "איכילוב" → המרכז הרפואי תל אביב ע"ש סוראסקי (איכילוב), "בילינסון" → מרכז רפואי רבין - קמפוס בילינסון, "אסף הרופא" → המרכז הרפואי שמיר – אסף הרופא).
 Put the sender exactly as written on the form in `raw_text`.
 If the sender is visible but does not clearly match any list entry, or could match more than one entry (e.g. "אסותא" with no branch, "הדסה" with no campus, "רבין" with no campus): value = "", found = true, confidence "low", and describe it in `issue` (e.g. "not in list", "branch unclear").

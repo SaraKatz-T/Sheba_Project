@@ -520,6 +520,12 @@ th[aria-sort] .th-sort {
   white-space: nowrap;
 }
 
+.file-head-date {
+  flex: none;
+  color: var(--ink-700);
+  font-size: var(--text-sm);
+}
+
 .file-head-count {
   flex: none;
   padding: 1px 10px;
@@ -533,7 +539,7 @@ th[aria-sort] .th-sort {
 /* Fixed layout: the same column widths in every file's table */
 .file-card table.records {
   table-layout: fixed;
-  min-width: 900px;
+  min-width: 1150px;
 }
 
 .file-card .records td {
