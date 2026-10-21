@@ -1,0 +1,176 @@
+"""עובד קריאה: שולח עמוד ל-Gemini, קורא שוב את השם בהגדלה, ושומר את התוצאה כשורות ושדות.
+
+כמה עובדים רצים במקביל (READ_WORKERS). לכל עובד מופע GeminiExtractor משלו, כך שאין ביניהם מצב משותף
+והקוד הקיים לא משתנה.
+"""
+
+import json
+import logging
+import threading
+import time
+from datetime import timedelta
+
+from commitment_extractor.name_zoom import crop_name_region
+
+from .. import db, events, settings
+from ..times import iso, utcnow
+from . import mapping, pause
+
+log = logging.getLogger("server.worker")
+
+STEP_PAGE = {"percent": 10, "step": "קריאה ראשונה (Gemini)"}
+STEP_NAME = {"percent": 60, "step": "קריאת השם בהגדלה"}
+STEP_PAUSED = {"percent": 0, "step": "ממתין: המכסה של Gemini נגמרה"}
+ERROR_FAILED = "לא הצלחנו לקרוא את העמוד. אפשר לנסות שוב."
+QUOTA_MESSAGE = "כל המפתחות נחסמו"   # השגיאה ש-GeminiExtractor זורק כשהמכסה נגמרה גם אחרי ההמתנות שלו
+
+_claim_lock = threading.Lock()
+
+
+def make_extractor():
+    """מופע חדש של הקוד הקיים. בבדיקות מחליפים אותו ב-Gemini מדומה."""
+    from commitment_extractor.gemini_extractor import GeminiExtractor
+    return GeminiExtractor()
+
+
+def _page_forms(conn, upload_id: str, number: int) -> list[str]:
+    return [r["id"] for r in conn.execute(
+        "SELECT id FROM forms WHERE upload_id = ? AND page_number = ? ORDER BY position", (upload_id, number))]
+
+
+def claim_page() -> tuple[str, int] | None:
+    """לוקח את העמוד הבא שממתין (לפי סדר הגעת הקבצים) ומעביר את השורות שלו ל-processing."""
+    now = iso(utcnow())
+    with _claim_lock, db.connect() as conn:
+        row = conn.execute(
+            "SELECT p.upload_id, p.number FROM pages p JOIN uploads u ON u.id = p.upload_id "
+            "WHERE (p.retry_at IS NULL OR p.retry_at <= ?) AND EXISTS (SELECT 1 FROM forms f "
+            "  WHERE f.upload_id = p.upload_id AND f.page_number = p.number AND f.status = 'received') "
+            "ORDER BY u.queued_at, p.number LIMIT 1", (now,)).fetchone()
+        if row is None:
+            return None
+        upload_id, number = row["upload_id"], row["number"]
+        conn.execute("UPDATE forms SET status = 'processing', progress = ?, updated_at = ? "
+                     "WHERE upload_id = ? AND page_number = ? AND status = 'received'",
+                     (json.dumps(STEP_PAGE, ensure_ascii=False), now, upload_id, number))
+        conn.execute("UPDATE pages SET attempts = attempts + 1, retry_at = NULL, started_at = ?, finished_at = NULL "
+                     "WHERE upload_id = ? AND number = ?", (now, upload_id, number))
+        form_ids = _page_forms(conn, upload_id, number)
+    for form_id in form_ids:
+        events.form_changed(form_id)
+    return upload_id, number
+
+
+def _set_progress(upload_id: str, number: int, progress: dict):
+    with db.connect() as conn:
+        conn.execute("UPDATE forms SET progress = ?, updated_at = ? WHERE upload_id = ? AND page_number = ? "
+                     "AND status = 'processing'",
+                     (json.dumps(progress, ensure_ascii=False), iso(utcnow()), upload_id, number))
+        form_ids = _page_forms(conn, upload_id, number)
+    for form_id in form_ids:
+        events.form_changed(form_id)
+
+
+def _zoom_names(extractor, result: dict, png: bytes):
+    """לכל מטופל: חיתוך והגדלה של אזור השם ושליחה חוזרת. כמו zoom_names ב-run_extraction.py,
+    בלי לשמור את החיתוכים לדיסק (הם מכילים שמות)."""
+    for record in result.get("records") or []:
+        if not isinstance(record, dict):
+            continue
+        crop = crop_name_region(png, record.get("name_box"))
+        if crop is None:
+            record["name_zoom"] = {"skipped": "no valid name_box"}
+            continue
+        try:
+            record["name_zoom"] = extractor.extract_page(crop, task="name")
+        except Exception as e:   # ההגדלה לא הכרחית: בלעדיה נשארים עם קריאת העמוד המלא
+            record["name_zoom"] = {"error": type(e).__name__}
+
+
+def _finish_upload_if_done(conn, upload_id: str) -> bool:
+    """כשאין בקובץ עוד שורות שממתינות או בעיבוד, הקובץ עובר ל-done."""
+    left = conn.execute("SELECT COUNT(*) FROM forms WHERE upload_id = ? AND status IN ('received', 'processing')",
+                        (upload_id,)).fetchone()[0]
+    if left:
+        return False
+    cur = conn.execute("UPDATE uploads SET status = 'done', updated_at = ? WHERE id = ? AND status = 'processing'",
+                       (iso(utcnow()), upload_id))
+    return cur.rowcount > 0
+
+
+def read_page(extractor, upload_id: str, number: int):
+    with db.connect() as conn:
+        page = conn.execute("SELECT image_path, attempts FROM pages WHERE upload_id = ? AND number = ?",
+                            (upload_id, number)).fetchone()
+    started = time.monotonic()
+    try:
+        png = (settings.STORAGE_DIR / page["image_path"]).read_bytes()
+        result = extractor.extract_page(png)
+        _set_progress(upload_id, number, STEP_NAME)
+        _zoom_names(extractor, result, png)
+    except Exception as e:
+        _handle_failure(upload_id, number, page["attempts"], e)
+        return
+
+    with db.connect() as conn:
+        conn.execute("UPDATE pages SET raw_result = ?, finished_at = ? WHERE upload_id = ? AND number = ?",
+                     (json.dumps(result, ensure_ascii=False), iso(utcnow()), upload_id, number))
+        form_ids = mapping.apply(conn, upload_id, number, result)
+        done = _finish_upload_if_done(conn, upload_id)
+    log.info("עמוד %d בקובץ %s: נקרא (%d שורות, %.1f שנ')", number, upload_id, len(form_ids),
+             time.monotonic() - started)
+    for form_id in form_ids:
+        events.form_changed(form_id)
+    events.upload_changed(upload_id)   # form_ids, form_count ו-eta_at השתנו
+    events.queue_changed(skip=upload_id)   # הזמן הממוצע לעמוד השתנה: גם הזמן המשוער של שאר הקבצים
+    if done:
+        log.info("קובץ %s: הסתיים", upload_id)
+
+
+def _handle_failure(upload_id: str, number: int, attempts: int, error: Exception):
+    now = utcnow()
+    with db.connect() as conn:
+        if QUOTA_MESSAGE in str(error):
+            # המכסה נגמרה: זה לא כישלון של העמוד. עוצרים את כל התור, והעמוד חוזר לתור בלי שהניסיון נספר
+            until = now + timedelta(minutes=settings.QUOTA_PAUSE_MINUTES)
+            pause(until)
+            conn.execute("UPDATE pages SET attempts = attempts - 1, started_at = NULL WHERE upload_id = ? AND number = ?",
+                         (upload_id, number))
+            conn.execute("UPDATE forms SET status = 'received', updated_at = ? WHERE upload_id = ? AND page_number = ? "
+                         "AND status = 'processing'", (iso(now), upload_id, number))
+            waiting = [r["id"] for r in conn.execute("SELECT id FROM forms WHERE status = 'received'")]
+            conn.execute("UPDATE forms SET progress = ? WHERE status = 'received'",
+                         (json.dumps(STEP_PAUSED, ensure_ascii=False),))
+            log.warning("המכסה של Gemini נגמרה: התור נעצר עד %s", (until.astimezone()).strftime("%H:%M"))
+            changed = waiting
+        elif attempts < settings.MAX_PAGE_ATTEMPTS:
+            delay = settings.RETRY_DELAYS_SECONDS[min(attempts, len(settings.RETRY_DELAYS_SECONDS)) - 1]
+            conn.execute("UPDATE pages SET retry_at = ? WHERE upload_id = ? AND number = ?",
+                         (iso(now + timedelta(seconds=delay)), upload_id, number))
+            conn.execute("UPDATE forms SET status = 'received', progress = NULL, updated_at = ? "
+                         "WHERE upload_id = ? AND page_number = ? AND status = 'processing'", (iso(now), upload_id, number))
+            log.warning("עמוד %d בקובץ %s: ניסיון %d נכשל (%s), ננסה שוב בעוד %d שנ'",
+                        number, upload_id, attempts, type(error).__name__, delay)
+            changed = _page_forms(conn, upload_id, number)
+        else:
+            conn.execute("UPDATE forms SET status = 'failed', progress = NULL, error = ?, updated_at = ? "
+                         "WHERE upload_id = ? AND page_number = ? AND status = 'processing'",
+                         (ERROR_FAILED, iso(now), upload_id, number))
+            _finish_upload_if_done(conn, upload_id)
+            log.warning("עמוד %d בקובץ %s: נכשל אחרי %d ניסיונות (%s)",
+                        number, upload_id, attempts, type(error).__name__)
+            changed = _page_forms(conn, upload_id, number)
+    for form_id in changed:
+        events.form_changed(form_id)
+    events.upload_changed(upload_id)
+    events.queue_changed(skip=upload_id)   # ניסיון חוזר או עצירה משנים את הזמן המשוער של כולם
+
+
+def clear_pause_message():
+    """העצירה הסתיימה: מוחקים את ההודעה "ממתין: המכסה נגמרה" מהשורות שממתינות."""
+    with db.connect() as conn:
+        rows = conn.execute("UPDATE forms SET progress = NULL WHERE status = 'received' AND progress = ? RETURNING id",
+                            (json.dumps(STEP_PAUSED, ensure_ascii=False),)).fetchall()
+    for row in rows:
+        events.form_changed(row["id"])
+    log.info("העצירה הסתיימה: ממשיכים לקרוא עמודים")

@@ -1,0 +1,379 @@
+{
+  "type": "object",
+  "properties": {
+    "orientation_degrees": {
+      "type": "string",
+      "enum": [
+        "0",
+        "90",
+        "180",
+        "270"
+      ]
+    },
+    "page_type": {
+      "type": "string",
+      "enum": [
+        "commitment_form",
+        "continuation",
+        "lab_report",
+        "other"
+      ]
+    },
+    "form_source": {
+      "type": "string"
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "first_name": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "string"
+              },
+              "raw_text": {
+                "type": "string"
+              },
+              "found": {
+                "type": "boolean"
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "good",
+                  "medium",
+                  "low"
+                ]
+              },
+              "issue": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "value",
+              "raw_text",
+              "found",
+              "confidence",
+              "issue"
+            ]
+          },
+          "last_name": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "string"
+              },
+              "raw_text": {
+                "type": "string"
+              },
+              "found": {
+                "type": "boolean"
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "good",
+                  "medium",
+                  "low"
+                ]
+              },
+              "issue": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "value",
+              "raw_text",
+              "found",
+              "confidence",
+              "issue"
+            ]
+          },
+          "id_number": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "string"
+              },
+              "raw_text": {
+                "type": "string"
+              },
+              "found": {
+                "type": "boolean"
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "good",
+                  "medium",
+                  "low"
+                ]
+              },
+              "issue": {
+                "type": "string"
+              },
+              "box": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                }
+              }
+            },
+            "required": [
+              "value",
+              "raw_text",
+              "found",
+              "confidence",
+              "issue",
+              "box"
+            ]
+          },
+          "central_numbers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                },
+                "raw_text": {
+                  "type": "string"
+                },
+                "found": {
+                  "type": "boolean"
+                },
+                "confidence": {
+                  "type": "string",
+                  "enum": [
+                    "high",
+                    "good",
+                    "medium",
+                    "low"
+                  ]
+                },
+                "issue": {
+                  "type": "string"
+                },
+                "box": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "required": [
+                "value",
+                "raw_text",
+                "found",
+                "confidence",
+                "issue",
+                "box"
+              ]
+            }
+          },
+          "received_date": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "string"
+              },
+              "raw_text": {
+                "type": "string"
+              },
+              "found": {
+                "type": "boolean"
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "good",
+                  "medium",
+                  "low"
+                ]
+              },
+              "issue": {
+                "type": "string"
+              },
+              "box": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                }
+              }
+            },
+            "required": [
+              "value",
+              "raw_text",
+              "found",
+              "confidence",
+              "issue",
+              "box"
+            ]
+          },
+          "sender": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "string",
+                "enum": [
+                  "",
+                  "כללית",
+                  "מכבי",
+                  "מאוחדת",
+                  "לאומית",
+                  "המרכז הרפואי ע\"ש חיים שיבא - תל השומר",
+                  "המרכז הרפואי תל אביב ע\"ש סוראסקי (איכילוב)",
+                  "המרכז הרפואי ע\"ש אדית וולפסון",
+                  "המרכז הרפואי הלל יפה",
+                  "רמב\"ם - הקריה הרפואית לבריאות האדם",
+                  "מרכז רפואי בני ציון",
+                  "המרכז הרפואי לגליל",
+                  "המרכז הרפואי זיו",
+                  "המרכז הרפואי צפון - פוריה",
+                  "מרכז רפואי ברזילי",
+                  "המרכז הרפואי שמיר – אסף הרופא",
+                  "המרכז הרפואי האוניברסיטאי סורוקה",
+                  "מרכז רפואי רבין - קמפוס בילינסון",
+                  "מרכז רפואי רבין - קמפוס גולדה השרון",
+                  "מרכז שניידר לרפואת ילדים בישראל",
+                  "המרכז הרפואי כרמל",
+                  "מרכז רפואי העמק",
+                  "מרכז רפואי מאיר",
+                  "מרכז רפואי קפלן",
+                  "המרכז הרפואי יוספטל",
+                  "מרכז רפואי הדסה - בית החולים עין כרם",
+                  "מרכז רפואי הדסה - בית החולים הר הצופים",
+                  "המרכז הרפואי שערי צדק",
+                  "בית החולים אוגוסטה ויקטוריה",
+                  "בית החולים סנט ג'וזף",
+                  "בית החולים אל-מקאסד",
+                  "לניאדו - מרכז רפואי צאנז",
+                  "בית החולים האוניברסיטאי אסותא אשדוד",
+                  "מרכז רפואי מעיני הישועה",
+                  "בית החולים האיטלקי (חיפה)",
+                  "בית החולים נצרת (האנגלי)",
+                  "בית החולים המשפחה ה\"קדושה\" (האיטלקי)",
+                  "בית החולים סן ונסן דה פול (הצרפתי)",
+                  "בית החולים אסותא רמת החייל",
+                  "בית החולים אסותא חיפה",
+                  "בית החולים אסותא ראשון לציון",
+                  "בית החולים אסותא באר שבע",
+                  "המרכז הרפואי אסותא ירושלים",
+                  "המרכז הרפואי אסותא השלום-תל אביב",
+                  "המרכז הרפואי אסותא אשדוד-כלניות",
+                  "המרכז הרפואי אסותא רעננה",
+                  "הרצליה מדיקל סנטר",
+                  "בית החולים אלישע",
+                  "בית החולים רפאל",
+                  "משגב לדך"
+                ]
+              },
+              "raw_text": {
+                "type": "string"
+              },
+              "found": {
+                "type": "boolean"
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "good",
+                  "medium",
+                  "low"
+                ]
+              },
+              "issue": {
+                "type": "string"
+              },
+              "box": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                }
+              }
+            },
+            "required": [
+              "value",
+              "raw_text",
+              "found",
+              "confidence",
+              "issue",
+              "box"
+            ]
+          },
+          "commitment_numbers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                },
+                "raw_text": {
+                  "type": "string"
+                },
+                "found": {
+                  "type": "boolean"
+                },
+                "confidence": {
+                  "type": "string",
+                  "enum": [
+                    "high",
+                    "good",
+                    "medium",
+                    "low"
+                  ]
+                },
+                "issue": {
+                  "type": "string"
+                },
+                "box": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "required": [
+                "value",
+                "raw_text",
+                "found",
+                "confidence",
+                "issue",
+                "box"
+              ]
+            }
+          },
+          "name_box": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        },
+        "required": [
+          "first_name",
+          "last_name",
+          "id_number",
+          "central_numbers",
+          "received_date",
+          "sender",
+          "commitment_numbers"
+        ]
+      }
+    }
+  },
+  "required": [
+    "orientation_degrees",
+    "page_type",
+    "form_source",
+    "records"
+  ]
+}
