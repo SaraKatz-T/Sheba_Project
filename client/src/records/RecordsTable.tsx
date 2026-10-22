@@ -1,9 +1,8 @@
-import { ArrowDown, ArrowUp, ChevronDown, Copy, FlaskConical, Smartphone, Upload } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronDown, FlaskConical, Smartphone, Trash2, Upload } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import type { FormSummary } from '../api/types'
 import { StatusChip, YellowChip } from '../components/StatusChip'
 import { formatDate, formatDateTime, formatNumber } from '../lib/format'
-import type { DuplicateGroup } from './duplicates'
 import type { SortKey } from './filters'
 
 const PAGE = 50
@@ -18,6 +17,7 @@ interface Column {
 }
 
 const COLUMNS: Column[] = [
+  { key: null, label: '', className: 'col-select' },
   { key: 'commitment', label: 'מספר התחייבות' },
   { key: 'first_name', label: 'שם פרטי' },
   { key: 'name', label: 'שם משפחה' },
@@ -32,7 +32,7 @@ const COLUMNS: Column[] = [
 ]
 
 // The same widths in every file's table, so the columns line up from one table to the next.
-const COLUMN_WIDTHS = ['12%', '10%', '10%', '10%', '9%', '17%', '10%', '11%', '7%', '4%']
+const COLUMN_WIDTHS = ['3%', '12%', '10%', '10%', '10%', '9%', '14%', '10%', '11%', '7%', '4%']
 
 // The field keys each column shows, so a cell turns yellow while one of them is still open.
 const CELL_KEYS = {
@@ -60,6 +60,9 @@ function Missing({ form, sent = true }: { form: FormSummary; sent?: boolean }) {
   return <span className="muted">{read && sent ? 'לא נמצא' : '—'}</span>
 }
 
+/** A record still being read can't be deleted here; it is stopped from the intake queue. */
+export const canDelete = (f: FormSummary) => f.status !== 'received' && f.status !== 'processing'
+
 /** Rows grouped by the file they came from, keeping the table's order. */
 function byFile(forms: FormSummary[]) {
   const groups: Array<{ uploadId: string; forms: FormSummary[] }> = []
@@ -81,14 +84,17 @@ interface Props {
   sort: SortKey
   dir: 'asc' | 'desc'
   onSort: (key: SortKey) => void
-  duplicates: Map<string, DuplicateGroup>
-  onShowDuplicates: () => void
   openId: string | null
   onToggle: (id: string) => void
   renderDetail: (id: string) => ReactNode
+  /** Records ticked for a bulk action (delete). */
+  selected: Set<string>
+  onSelect: (ids: string[], on: boolean) => void
+  /** Asks to move these records (all the deletable ones of one file) to the trash. */
+  onDelete: (ids: string[]) => void
 }
 
-export function RecordsTable({ forms, sort, dir, onSort, duplicates, onShowDuplicates, openId, onToggle, renderDetail }: Props) {
+export function RecordsTable({ forms, sort, dir, onSort, openId, onToggle, renderDetail, selected, onSelect, onDelete }: Props) {
   const [limit, setLimit] = useState(PAGE)
 
   // A new search or sort starts again from the top of the list.
@@ -105,10 +111,29 @@ export function RecordsTable({ forms, sort, dir, onSort, duplicates, onShowDupli
 
   const groups = byFile(forms.slice(0, limit))
 
-  const head = (
+  const head = (fileForms: FormSummary[], fileName: string) => {
+    const ids = fileForms.filter(canDelete).map((f) => f.id)
+    const ticked = ids.filter((id) => selected.has(id)).length
+    return (
     <thead>
       <tr>
         {COLUMNS.map((col, i) => {
+          if (col.className === 'col-select') {
+            return (
+              <th key={i} scope="col" className="col-select">
+                <input
+                  type="checkbox"
+                  aria-label={`בחירת כל הטפסים בקובץ ${fileName}`}
+                  checked={ids.length > 0 && ticked === ids.length}
+                  ref={(el) => {
+                    if (el) el.indeterminate = ticked > 0 && ticked < ids.length
+                  }}
+                  disabled={ids.length === 0}
+                  onChange={(e) => onSelect(ids, e.target.checked)}
+                />
+              </th>
+            )
+          }
           const active = col.key !== null && col.key === sort
           return (
             <th
@@ -131,7 +156,8 @@ export function RecordsTable({ forms, sort, dir, onSort, duplicates, onShowDupli
         })}
       </tr>
     </thead>
-  )
+    )
+  }
 
   return (
     <div className="file-tables">
@@ -152,6 +178,17 @@ export function RecordsTable({ forms, sort, dir, onSort, duplicates, onShowDupli
               <span className="file-head-date">
                 התקבל <span className="num">{formatDateTime(file.received_at)}</span>
               </span>
+              {group.forms.some(canDelete) && (
+                <button
+                  type="button"
+                  className="icon-btn file-head-delete"
+                  onClick={() => onDelete(group.forms.filter(canDelete).map((f) => f.id))}
+                  aria-label={`מחיקת הקובץ ${file.file_name}`}
+                  title="מחיקת הקובץ (כל הטפסים שלו)"
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
             </header>
             <div className="table-scroll">
               <table className="records">
@@ -164,50 +201,44 @@ export function RecordsTable({ forms, sort, dir, onSort, duplicates, onShowDupli
                     <col key={i} style={{ width: w }} />
                   ))}
                 </colgroup>
-                {head}
+                {head(group.forms, file.file_name)}
                 <tbody>
                   {group.forms.map((f) => {
-                    const dup = duplicates.get(f.id)
-                    const canOpen = f.status !== 'approved'
-                    const open = canOpen && f.id === openId
+                    // Every row opens, approved ones too: their fields can still be corrected.
+                    const open = f.id === openId
                     return [
                       <tr
                         key={f.id}
                         id={`row-${f.id}`}
-                        className={open ? 'is-open' : canOpen ? undefined : 'is-final'}
+                        className={open ? 'is-open' : undefined}
                         onClick={(e) =>
-                          canOpen && !(e.target as Element).closest('a, button:not(.row-toggle)') && onToggle(f.id)
+                          !(e.target as Element).closest('a, input, label, button:not(.row-toggle)') && onToggle(f.id)
                         }
                       >
+                        <td className="col-select">
+                          <input
+                            type="checkbox"
+                            aria-label={`בחירת הטופס ${f.commitment_number ?? ''}`}
+                            checked={selected.has(f.id)}
+                            disabled={!canDelete(f)}
+                            title={canDelete(f) ? undefined : 'הטופס עוד בעיבוד'}
+                            onChange={(e) => onSelect([f.id], e.target.checked)}
+                          />
+                        </td>
                         <td className={yellow(f, 'commitment')}>
                           <div className="cell-key">
-                            {canOpen ? (
-                              <button
-                                type="button"
-                                className="row-toggle"
-                                aria-expanded={open}
-                                aria-controls={open ? `detail-${f.id}` : undefined}
-                              >
-                                {f.commitment_number ? (
-                                  <span className="ltr num">{f.commitment_number}</span>
-                                ) : (
-                                  <span className="muted">{f.status === 'failed' ? 'לא נקרא' : 'טרם חולץ'}</span>
-                                )}
-                              </button>
-                            ) : (
-                              <span className="row-key ltr num">{f.commitment_number ?? '—'}</span>
-                            )}
-                            {dup && (
-                              <button
-                                type="button"
-                                className="chip chip-pending chip-button"
-                                onClick={onShowDuplicates}
-                                title={`מספר ההתחייבות הזה מופיע ב-${dup.forms.length} טפסים`}
-                              >
-                                <Copy size={12} aria-hidden="true" />
-                                כפילות
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              className="row-toggle"
+                              aria-expanded={open}
+                              aria-controls={open ? `detail-${f.id}` : undefined}
+                            >
+                              {f.commitment_number ? (
+                                <span className="ltr num">{f.commitment_number}</span>
+                              ) : (
+                                <span className="muted">{f.status === 'failed' ? 'לא נקרא' : 'טרם חולץ'}</span>
+                              )}
+                            </button>
                           </div>
                         </td>
                         <td className={yellow(f, 'first_name', 'cell-name')}>
@@ -240,7 +271,7 @@ export function RecordsTable({ forms, sort, dir, onSort, duplicates, onShowDupli
                           {f.status === 'pending_review' && <YellowChip count={f.uncertain_count} />}
                         </td>
                         <td className="col-action">
-                          {canOpen && <ChevronDown size={18} className="row-chevron" aria-hidden="true" />}
+                          <ChevronDown size={18} className="row-chevron" aria-hidden="true" />
                         </td>
                       </tr>,
                       open && (

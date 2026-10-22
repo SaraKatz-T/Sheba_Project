@@ -8,3 +8,4 @@ uvicorn[standard]
 python-multipart
 pytesseract
 pillow-heif
+msoffcrypto-tool

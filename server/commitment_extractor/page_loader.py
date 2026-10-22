@@ -32,22 +32,30 @@ def _to_png(img: Image.Image) -> bytes:
     return buf.getvalue()
 
 
-def load_pages(path: Path):
-    """מחזיר את כל העמודים בקובץ (PDF או תמונה) כתמונות PNG."""
+def iter_images(path: Path, data: bytes | None = None):
+    """מחזיר את כל העמודים בקובץ (PDF או תמונה) כזוגות (מספר עמוד, תמונת RGB), בלי לקודד ל-PNG.
+    כל תמונה היא עותק עצמאי: אפשר להמשיך לעבוד עליה גם אחרי שהקובץ נסגר.
+    data: תוכן הקובץ, אם הוא כבר בזיכרון (למשל אחרי פענוח). אז path משמש רק לזיהוי הסוג לפי הסיומת."""
     suffix = path.suffix.lower()
     if suffix == ".pdf":
-        pdf = pdfium.PdfDocument(str(path))
+        pdf = pdfium.PdfDocument(data if data is not None else str(path))
         try:
             for i in range(len(pdf)):
                 img = pdf[i].render(scale=config.PDF_RENDER_DPI / 72).to_pil()
-                yield PageImage(path.name, i + 1, _to_png(img))
+                yield i + 1, img.convert("RGB")
         finally:
             pdf.close()
     elif suffix in IMAGE_SUFFIXES:
-        with Image.open(path) as img:
+        with Image.open(io.BytesIO(data) if data is not None else path) as img:
             n_frames = getattr(img, "n_frames", 1)  # TIFF יכול להכיל כמה עמודים
             for i in range(n_frames):
                 img.seek(i)
-                yield PageImage(path.name, i + 1, _to_png(img))
+                yield i + 1, img.convert("RGB")
     else:
         raise ValueError(f"סוג קובץ לא נתמך: {path.name}")
+
+
+def load_pages(path: Path):
+    """מחזיר את כל העמודים בקובץ (PDF או תמונה) כתמונות PNG."""
+    for number, img in iter_images(path):
+        yield PageImage(path.name, number, _to_png(img))

@@ -5,7 +5,7 @@
 כל פונקציה מחזירה את מזהי השורות שהשתנו, כדי לשלוח עליהן form.updated.
 """
 
-from . import worker
+from . import crypto, worker
 from .errors import ApiError
 from .times import iso, utcnow
 
@@ -14,6 +14,8 @@ def _form(conn, form_id: str):
     row = conn.execute("SELECT * FROM forms WHERE id = ?", (form_id,)).fetchone()
     if row is None:
         raise ApiError(404)
+    if row["deleted_at"]:
+        raise ApiError(409, "deleted", "הטופס בסל המחזור. צריך לשחזר אותו קודם.")
     return row
 
 
@@ -25,7 +27,8 @@ def _require_status(row, *statuses: str, message: str):
 def update_field(conn, form_id: str, key: str, value: str, source: str):
     """PATCH /api/forms/{id}/fields/{key}. מחזיר (השדה המעודכן, מזהי השורות שהשתנו)."""
     form = _form(conn, form_id)
-    _require_status(form, "pending_review", message="אפשר לתקן רק טופס שממתין לבדיקה.")
+    # טופס שאושר נשאר מאושר, אבל עדיין אפשר לתקן בו שדות (כל תיקון נרשם בהיסטוריה)
+    _require_status(form, "pending_review", "approved", message="אפשר לתקן רק טופס שממתין לבדיקה או שאושר.")
     field = conn.execute("SELECT * FROM fields WHERE key = ? AND (form_id = ? OR record_id = ?)",
                          (key, form_id, form["record_id"])).fetchone()
     if field is None:
@@ -41,10 +44,10 @@ def update_field(conn, form_id: str, key: str, value: str, source: str):
     if not corrected:
         original = None   # חזרו לערך המקורי: השדה כבר לא נחשב מתוקן
     conn.execute("UPDATE fields SET value = ?, uncertain = 0, corrected = ?, original_value = ? WHERE id = ?",
-                 (new, int(corrected), original, field["id"]))
+                 (crypto.seal(new), int(corrected), crypto.seal(original), field["id"]))
     now = iso(utcnow())
     conn.execute("INSERT INTO field_history (field_id, form_id, old_value, new_value, source, changed_at) "
-                 "VALUES (?, ?, ?, ?, ?, ?)", (field["id"], form_id, old, new, source, now))
+                 "VALUES (?, ?, ?, ?, ?, ?)", (field["id"], form_id, crypto.seal(old), crypto.seal(new), source, now))
 
     if field["record_id"]:   # שדה משותף: כל השורות של המטופל השתנו
         changed = [r["id"] for r in conn.execute("SELECT id FROM forms WHERE record_id = ?", (field["record_id"],))]
@@ -76,7 +79,7 @@ def reject(conn, form_id: str, reason: str | None) -> list[str]:
     _require_status(form, "pending_review", "failed", message="אפשר לדחות רק טופס שממתין לבדיקה או שנכשל.")
     now = iso(utcnow())
     conn.execute("UPDATE forms SET status = 'rejected', reviewed_at = ?, reject_reason = ?, updated_at = ? "
-                 "WHERE id = ?", (now, reason, now, form_id))
+                 "WHERE id = ?", (now, crypto.seal(reason), now, form_id))
     return [form_id]
 
 

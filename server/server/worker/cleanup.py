@@ -1,6 +1,7 @@
-"""מחיקת תמונות: תמונת עמוד 24 שעות אחרי שאושרה השורה האחרונה בעמוד, ותמונה מוקטנת 24 שעות אחרי הקליטה.
+"""מחיקת תמונות: תמונת עמוד 24 שעות אחרי שהשורה האחרונה בעמוד אושרה או נדחתה, ותמונה מוקטנת 24 שעות אחרי הקליטה.
+וסל המחזור: רשומה שנמחקה נמחקת לתמיד אחרי TRASH_KEEP_DAYS ימים.
 
-עמוד עם 2 מספרי התחייבות נמחק רק כששתי השורות אושרו. הפרטים שנקראו (שם, ת"ז וכו') נשארים;
+עמוד עם 2 מספרי התחייבות נמחק רק כששתי השורות אושרו או נדחו. הפרטים שנקראו (שם, ת"ז וכו') נשארים;
 רק התמונה נמחקת, ו-image_path מתאפס.
 """
 
@@ -22,7 +23,8 @@ def delete_old_images() -> int:
             "JOIN forms f ON f.upload_id = p.upload_id AND f.page_number = p.number "
             "WHERE p.image_path IS NOT NULL "
             "GROUP BY p.upload_id, p.number "
-            "HAVING SUM(f.status != 'approved') = 0 AND MAX(f.reviewed_at) <= ?", (cutoff,)).fetchall()
+            "HAVING SUM(f.status NOT IN ('approved', 'rejected')) = 0 AND MAX(f.reviewed_at) <= ?",
+            (cutoff,)).fetchall()
     for page in pages:
         (settings.STORAGE_DIR / page["image_path"]).unlink(missing_ok=True)
         with db.connect() as conn:

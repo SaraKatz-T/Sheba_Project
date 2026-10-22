@@ -87,7 +87,7 @@ export function AppShell() {
               )}
             </NavLink>
             <NavLink to="/records" className="nav-link">
-              רשומות
+              טפסים
               {pending > 0 && (
                 <span className="badge" aria-label={`${pending} ממתינים לבדיקה`}>
                   {formatNumber(pending)}

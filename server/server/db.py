@@ -17,7 +17,7 @@ eta_at, שם הקובץ בטופס, person_name, uncertain_count וכו') לא �
 import sqlite3
 from contextlib import contextmanager
 
-from . import settings
+from . import crypto, settings
 
 SCHEMA = """
 -- כניסה למערכת
@@ -42,7 +42,9 @@ CREATE TABLE IF NOT EXISTS uploads (
     error TEXT,
     stored_path TEXT,              -- פנימי: מיקום הקובץ, יחסי ל-storage. NULL אחרי שנמחק (מיד אחרי הפיצול)
     queued_at TEXT NOT NULL,       -- פנימי: סדר התור (מתעדכן ב-retry)
-    thumbnail_path TEXT            -- פנימי: התמונה המוקטנת (thumbnail_url). NULL אם לא נוצרה או נמחקה
+    thumbnail_path TEXT,           -- פנימי: התמונה המוקטנת (thumbnail_url). NULL אם לא נוצרה או נמחקה
+    paused INTEGER NOT NULL DEFAULT 0,   -- 1 = המשתמש עצר את העיבוד ("עצור"); עמודים לא נשלחים עד "המשך"
+    removed_at TEXT                -- פנימי: הוסר מתור הקליטה, והטפסים שכבר נקראו נשמרו. NULL = לא הוסר
 );
 CREATE INDEX IF NOT EXISTS uploads_sha256 ON uploads(file_sha256);
 CREATE INDEX IF NOT EXISTS uploads_queue ON uploads(status, queued_at);
@@ -60,6 +62,7 @@ CREATE TABLE IF NOT EXISTS pages (
     retry_at TEXT,                 -- פנימי: אחרי כישלון, מתי מותר לנסות שוב
     started_at TEXT,               -- פנימי: תחילת הקריאה וסופה,
     finished_at TEXT,              --        לחישוב זמן ממוצע לעמוד (eta_at)
+    claim_id TEXT,                 -- פנימי: מזהה הקריאה הנוכחית. "עצור" מאפס אותו, ותשובה שמגיעה אחר כך נזרקת
     PRIMARY KEY (upload_id, number)
 );
 
@@ -87,6 +90,7 @@ CREATE TABLE IF NOT EXISTS forms (
     error TEXT,
     merged_into TEXT REFERENCES forms(id),
     reject_reason TEXT,            -- פנימי: הסיבה שנשלחה בדחייה
+    deleted_at TEXT,               -- בסל המחזור מאז. NULL = לא נמחק. נמחק לתמיד אחרי TRASH_KEEP_DAYS
     FOREIGN KEY (upload_id, page_number) REFERENCES pages(upload_id, number)
 );
 CREATE INDEX IF NOT EXISTS forms_upload ON forms(upload_id, page_number, position);
@@ -147,26 +151,37 @@ CREATE TABLE IF NOT EXISTS capture_sessions (
 
 
 # עמודות שנוספו אחרי שכבר נוצרו מסדי נתונים: מוסיפים אותן למסד קיים בלי למחוק אותו
-ADDED_COLUMNS = [("uploads", "thumbnail_path", "TEXT")]
+ADDED_COLUMNS = [("uploads", "thumbnail_path", "TEXT"),
+                 ("uploads", "paused", "INTEGER NOT NULL DEFAULT 0"),
+                 ("uploads", "removed_at", "TEXT"),
+                 ("pages", "claim_id", "TEXT"),
+                 ("forms", "deleted_at", "TEXT")]
 
 
 def init_db():
     settings.STORAGE_DIR.mkdir(parents=True, exist_ok=True)
     with connect() as conn:
         conn.execute("PRAGMA journal_mode=WAL")   # ה-API והעובדים כותבים במקביל
-        conn.executescript(SCHEMA)
+        conn.executescript(SCHEMA + crypto.KEYS_SCHEMA)
         for table, column, column_type in ADDED_COLUMNS:
             existing = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
             if column not in existing:
                 conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {column_type}")
+    crypto.seal("")   # יוצר את מפתח הנתונים של המסד כבר בהפעלה, ובודק שמפתח־העל מתאים לו
+
+
+def _row(cursor, values):
+    """שורה רגילה של sqlite3, אחרי פענוח העמודות המוצפנות (crypto.TEXT_PREFIX)."""
+    return sqlite3.Row(cursor, tuple(crypto.open_value(v) for v in values))
 
 
 @contextmanager
 def connect():
     """חיבור לפעולה אחת: commit בסוף, rollback בשגיאה, ותמיד סגירה."""
     conn = sqlite3.connect(settings.DB_PATH, timeout=10)
-    conn.row_factory = sqlite3.Row
+    conn.row_factory = _row
     conn.execute("PRAGMA foreign_keys=ON")
+    conn.execute("PRAGMA secure_delete=ON")   # מה שנמחק נדרס באפסים, ולא נשאר בקובץ המסד
     try:
         with conn:
             yield conn

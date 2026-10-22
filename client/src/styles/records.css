@@ -204,34 +204,32 @@
   animation: fade-up var(--fast) var(--ease) both;
 }
 
+.popover-panel:focus {
+  outline: none;
+}
+
 .popover-panel.is-end {
   inset-inline-start: auto;
   inset-inline-end: 0;
 }
 
-/* Export */
+/* Send to lab (dialog) */
 
-.export-button {
-  min-height: 40px;
-  gap: var(--s-2);
+.send-dialog {
+  width: min(960px, calc(100vw - 32px));
 }
 
-.export-panel {
-  display: grid;
-  gap: var(--s-1);
-}
-
-.export-scope {
-  padding: var(--s-2) var(--s-3);
-  color: var(--ink-500);
-  font-size: var(--text-sm);
+.send-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-6);
 }
 
 .export-choice {
   display: grid;
   gap: var(--s-2);
   margin: 0;
-  padding: var(--s-2) var(--s-3);
+  padding: 0;
   border: 0;
 }
 
@@ -283,50 +281,80 @@
   font-size: var(--text-sm);
 }
 
-.export-option {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: var(--s-3);
-  padding: var(--s-3);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--ink-900);
-  font: inherit;
+.send-empty {
+  padding: var(--s-6) 0;
+  text-align: center;
+}
+
+.send-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.send-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.send-table th,
+.send-table td {
+  padding: var(--s-2) var(--s-3);
+  border-bottom: 1px solid var(--line);
   text-align: start;
+  white-space: nowrap;
+}
+
+.send-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+  color: var(--ink-500);
+  font-weight: 600;
+}
+
+.send-table .send-check {
+  width: 1%;
+}
+
+.send-table input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--brand-600);
   cursor: pointer;
 }
 
-.export-option:hover:not(:disabled) {
+.send-file td {
   background: var(--brand-50);
 }
 
-.export-option:disabled {
-  cursor: default;
-  opacity: 0.55;
+.send-table tr.is-off td:not(.send-check) {
+  color: var(--ink-300);
 }
 
-.export-option svg {
-  color: var(--brand-600);
+.send-foot {
+  align-items: center;
 }
 
-.export-option > span {
-  display: grid;
-}
-
-.export-option .muted {
-  font-size: var(--text-xs);
-}
-
-.export-progress {
+.send-count {
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  padding: var(--s-2) var(--s-3);
-  color: var(--brand-600);
+  margin-inline-end: auto;
+  color: var(--ink-700);
   font-size: var(--text-sm);
-  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .send-foot {
+    flex-wrap: wrap;
+  }
+
+  .send-count {
+    flex-basis: 100%;
+  }
 }
 
 .pop-options {
@@ -1065,4 +1093,73 @@ th[aria-sort] .th-sort {
     grid-template-columns: 1fr;
     gap: 2px;
   }
+}
+
+/* Deleting records: tick boxes, the bar that acts on the ticked ones, and the trash */
+
+.col-select {
+  width: 1%;
+  text-align: center;
+}
+
+.col-select input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--brand-600);
+  cursor: pointer;
+}
+
+.col-select input:disabled {
+  cursor: not-allowed;
+}
+
+.selection-bar {
+  position: sticky;
+  top: var(--s-2);
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+  margin-bottom: var(--s-4);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--radius-lg);
+  background: var(--brand-50);
+  box-shadow: var(--shadow);
+}
+
+.selection-count {
+  margin-inline-end: auto;
+  color: var(--brand-600);
+  font-weight: 700;
+}
+
+.file-head-delete {
+  margin-inline-start: auto;
+  color: var(--ink-500);
+}
+
+.file-head-delete:hover {
+  color: var(--danger-ink);
+}
+
+.detail-delete {
+  justify-self: start;
+  color: var(--ink-500);
+}
+
+.detail-delete:hover:not(:disabled) {
+  color: var(--danger-ink);
+}
+
+.trash-table td {
+  vertical-align: middle;
+}
+
+.trash-table .cell-file {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

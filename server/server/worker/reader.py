@@ -6,13 +6,14 @@
 
 import json
 import logging
+import secrets
 import threading
 import time
 from datetime import timedelta
 
-from commitment_extractor.name_zoom import crop_name_region
+from commitment_extractor.name_zoom import box_on_page, crop_name_region_with_box
 
-from .. import db, events, settings
+from .. import crypto, db, events, settings
 from ..times import iso, utcnow
 from . import mapping, pause
 
@@ -42,9 +43,10 @@ def claim_page() -> tuple[str, int] | None:
     """לוקח את העמוד הבא שממתין (לפי סדר הגעת הקבצים) ומעביר את השורות שלו ל-processing."""
     now = iso(utcnow())
     with _claim_lock, db.connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")   # הבחירה והסימון יחד: "עצור" לא יכול להיכנס ביניהם
         row = conn.execute(
             "SELECT p.upload_id, p.number FROM pages p JOIN uploads u ON u.id = p.upload_id "
-            "WHERE (p.retry_at IS NULL OR p.retry_at <= ?) AND EXISTS (SELECT 1 FROM forms f "
+            "WHERE u.paused = 0 AND u.removed_at IS NULL AND (p.retry_at IS NULL OR p.retry_at <= ?) AND EXISTS (SELECT 1 FROM forms f "
             "  WHERE f.upload_id = p.upload_id AND f.page_number = p.number AND f.status = 'received') "
             "ORDER BY u.queued_at, p.number LIMIT 1", (now,)).fetchone()
         if row is None:
@@ -53,8 +55,8 @@ def claim_page() -> tuple[str, int] | None:
         conn.execute("UPDATE forms SET status = 'processing', progress = ?, updated_at = ? "
                      "WHERE upload_id = ? AND page_number = ? AND status = 'received'",
                      (json.dumps(STEP_PAGE, ensure_ascii=False), now, upload_id, number))
-        conn.execute("UPDATE pages SET attempts = attempts + 1, retry_at = NULL, started_at = ?, finished_at = NULL "
-                     "WHERE upload_id = ? AND number = ?", (now, upload_id, number))
+        conn.execute("UPDATE pages SET attempts = attempts + 1, retry_at = NULL, started_at = ?, finished_at = NULL, "
+                     "claim_id = ? WHERE upload_id = ? AND number = ?", (now, secrets.token_hex(8), upload_id, number))
         form_ids = _page_forms(conn, upload_id, number)
     for form_id in form_ids:
         events.form_changed(form_id)
@@ -77,14 +79,21 @@ def _zoom_names(extractor, result: dict, png: bytes):
     for record in result.get("records") or []:
         if not isinstance(record, dict):
             continue
-        crop = crop_name_region(png, record.get("name_box"))
-        if crop is None:
+        cropped = crop_name_region_with_box(png, record.get("name_box"))
+        if cropped is None:
             record["name_zoom"] = {"skipped": "no valid name_box"}
             continue
+        crop, crop_box = cropped
         try:
-            record["name_zoom"] = extractor.extract_page(crop, task="name")
+            zoom = extractor.extract_page(crop, task="name")
         except Exception as e:   # ההגדלה לא הכרחית: בלעדיה נשארים עם קריאת העמוד המלא
             record["name_zoom"] = {"error": type(e).__name__}
+            continue
+        # המיקום של כל שם בתוך החיתוך ← מיקום בעמוד, כדי שכל שדה יקבל מסגרת משלו
+        for key in ("first_name", "last_name"):
+            if isinstance(zoom, dict) and isinstance(zoom.get(key), dict):
+                zoom[key]["page_box"] = box_on_page(zoom[key].get("box"), crop_box)
+        record["name_zoom"] = zoom
 
 
 def _finish_upload_if_done(conn, upload_id: str) -> bool:
@@ -98,25 +107,65 @@ def _finish_upload_if_done(conn, upload_id: str) -> bool:
     return cur.rowcount > 0
 
 
+def _still_mine(conn, upload_id: str, number: int, claim_id: str) -> bool:
+    """האם הקריאה הזו עדיין רלוונטית. "עצור" או "הסר" בזמן הקריאה מבטלים אותה: אחרי "עצור" העמוד
+    חוזר לתור ונקרא מחדש ב"המשך"; אחרי "הסר" הוא כבר נמחק."""
+    return conn.execute(
+        "SELECT 1 FROM pages p JOIN uploads u ON u.id = p.upload_id "
+        "WHERE p.upload_id = ? AND p.number = ? AND p.claim_id = ? AND u.removed_at IS NULL AND u.paused = 0",
+        (upload_id, number, claim_id)).fetchone() is not None
+
+
+def _give_back(upload_id: str, number: int, claim_id: str):
+    """קריאה שבוטלה: אם העמוד עדיין רשום עליה, מחזירים אותו לתור (בלי לספור ניסיון)."""
+    with db.connect() as conn:
+        cur = conn.execute("UPDATE pages SET claim_id = NULL, started_at = NULL, attempts = MAX(attempts - 1, 0) "
+                           "WHERE upload_id = ? AND number = ? AND claim_id = ?", (upload_id, number, claim_id))
+        if cur.rowcount:
+            conn.execute("UPDATE forms SET status = 'received', progress = NULL, updated_at = ? "
+                         "WHERE upload_id = ? AND page_number = ? AND status = 'processing'",
+                         (iso(utcnow()), upload_id, number))
+    log.info("עמוד %d בקובץ %s: נעצר או הוסר בזמן הקריאה, התשובה נזרקה", number, upload_id)
+
+
 def read_page(extractor, upload_id: str, number: int):
     with db.connect() as conn:
-        page = conn.execute("SELECT image_path, attempts FROM pages WHERE upload_id = ? AND number = ?",
+        page = conn.execute("SELECT image_path, attempts, claim_id FROM pages WHERE upload_id = ? AND number = ?",
                             (upload_id, number)).fetchone()
+    if page is None or not page["claim_id"]:   # הוסר או נעצר בין הלקיחה מהתור לתחילת הקריאה
+        return
+    claim_id = page["claim_id"]
     started = time.monotonic()
     try:
-        png = (settings.STORAGE_DIR / page["image_path"]).read_bytes()
+        png = crypto.read_file(settings.STORAGE_DIR / page["image_path"])   # מפוענח בזיכרון בלבד
         result = extractor.extract_page(png)
+        with db.connect() as conn:
+            mine = _still_mine(conn, upload_id, number, claim_id)
+        if not mine:   # לא שולחים את ההגדלה של השם לחינם
+            _give_back(upload_id, number, claim_id)
+            return
         _set_progress(upload_id, number, STEP_NAME)
         _zoom_names(extractor, result, png)
     except Exception as e:
-        _handle_failure(upload_id, number, page["attempts"], e)
+        with db.connect() as conn:
+            mine = _still_mine(conn, upload_id, number, claim_id)
+        if mine:
+            _handle_failure(upload_id, number, page["attempts"], e)
+        else:
+            _give_back(upload_id, number, claim_id)
         return
 
     with db.connect() as conn:
-        conn.execute("UPDATE pages SET raw_result = ?, finished_at = ? WHERE upload_id = ? AND number = ?",
-                     (json.dumps(result, ensure_ascii=False), iso(utcnow()), upload_id, number))
-        form_ids = mapping.apply(conn, upload_id, number, result)
-        done = _finish_upload_if_done(conn, upload_id)
+        conn.execute("BEGIN IMMEDIATE")   # הבדיקה והשמירה יחד: "עצור" לא יכול להיכנס ביניהן
+        mine = _still_mine(conn, upload_id, number, claim_id)
+        if mine:
+            conn.execute("UPDATE pages SET raw_result = ?, finished_at = ? WHERE upload_id = ? AND number = ?",
+                         (crypto.seal(json.dumps(result, ensure_ascii=False)), iso(utcnow()), upload_id, number))
+            form_ids = mapping.apply(conn, upload_id, number, result)
+            done = _finish_upload_if_done(conn, upload_id)
+    if not mine:
+        _give_back(upload_id, number, claim_id)
+        return
     log.info("עמוד %d בקובץ %s: נקרא (%d שורות, %.1f שנ')", number, upload_id, len(form_ids),
              time.monotonic() - started)
     for form_id in form_ids:
@@ -125,6 +174,14 @@ def read_page(extractor, upload_id: str, number: int):
     events.queue_changed(skip=upload_id)   # הזמן הממוצע לעמוד השתנה: גם הזמן המשוער של שאר הקבצים
     if done:
         log.info("קובץ %s: הסתיים", upload_id)
+
+
+def _failure_message(error: Exception) -> str:
+    """ההודעה שמוצגת במסך כשעמוד נכשל. חסימה של NetFree או ניתוק מקבלים הודעה משלהם, כדי שיהיה ברור שזו לא תקלה בקריאה."""
+    from commitment_extractor.gemini_extractor import NetworkBlocked
+    if isinstance(error, NetworkBlocked):
+        return f"{str(error).split(',')[0]}. אפשר לנסות שוב."
+    return ERROR_FAILED
 
 
 def _handle_failure(upload_id: str, number: int, attempts: int, error: Exception):
@@ -155,7 +212,7 @@ def _handle_failure(upload_id: str, number: int, attempts: int, error: Exception
         else:
             conn.execute("UPDATE forms SET status = 'failed', progress = NULL, error = ?, updated_at = ? "
                          "WHERE upload_id = ? AND page_number = ? AND status = 'processing'",
-                         (ERROR_FAILED, iso(now), upload_id, number))
+                         (_failure_message(error), iso(now), upload_id, number))
             _finish_upload_if_done(conn, upload_id)
             log.warning("עמוד %d בקובץ %s: נכשל אחרי %d ניסיונות (%s)",
                         number, upload_id, attempts, type(error).__name__)

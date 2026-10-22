@@ -17,10 +17,10 @@ WIDTH = 240
 MAX_BYTES = 40 * 1024
 
 
-def _first_page(path, file_type: str) -> Image.Image:
+def _first_page(data: bytes, file_type: str) -> Image.Image:
     if file_type == "application/pdf":
         with PDFIUM_LOCK:
-            pdf = pdfium.PdfDocument(str(path))
+            pdf = pdfium.PdfDocument(data)
             try:
                 page = pdf[0]
                 scale = WIDTH * 2 / page.get_width()   # פי 2 מהרוחב הסופי, להקטנה חדה
@@ -29,16 +29,16 @@ def _first_page(path, file_type: str) -> Image.Image:
                 return image
             finally:
                 pdf.close()
-    with Image.open(path) as img:
+    with Image.open(io.BytesIO(data)) as img:
         img.draft("RGB", (WIDTH * 2, WIDTH * 4))   # ב-JPEG: קורא ישר בגודל קטן, מהר יותר
         img.seek(0)                                 # TIFF: העמוד הראשון
         return img.convert("RGB")
 
 
-def make(path, file_type: str) -> bytes | None:
-    """JPEG קטן של העמוד הראשון, או None אם אי אפשר (קובץ פגום וכד'). כשל לא מכשיל את הקליטה."""
+def make(data: bytes, file_type: str) -> bytes | None:
+    """JPEG קטן של העמוד הראשון (מהקובץ שבזיכרון), או None אם אי אפשר (קובץ פגום וכד'). כשל לא מכשיל את הקליטה."""
     try:
-        img = _first_page(path, file_type)
+        img = _first_page(data, file_type)
     except Exception:
         return None
     img.thumbnail((WIDTH, WIDTH * 4), Image.LANCZOS)

@@ -1,6 +1,6 @@
 import { MutationCache, QueryCache, QueryClient, useQuery } from '@tanstack/react-query'
 import { ApiError } from './client'
-import { getSession, listDismissals, listForms, listUploads } from './endpoints'
+import { getSession, listDismissals, listForms, listTrash, listUploads } from './endpoints'
 import { getLiveStatus } from './liveStatus'
 import type { DuplicateDismissal, FormList, FormSummary, Upload, UploadList } from './types'
 
@@ -10,6 +10,7 @@ export const keys = {
   forms: ['forms'] as const,
   form: (id: string) => ['forms', id] as const,
   dismissals: ['duplicate-dismissals'] as const,
+  trash: ['forms', 'trash'] as const,
 }
 
 /** The identity of a group of forms, whatever order the ids come in. */
@@ -41,6 +42,7 @@ const SAFETY_POLL_MS = 60_000
 
 const FORM_IN_FLIGHT = new Set(['received', 'processing'])
 const UPLOAD_IN_FLIGHT = new Set(['queued', 'splitting', 'processing'])
+const isUploadInFlight = (u: Upload) => UPLOAD_IN_FLIGHT.has(u.status) && !u.paused
 
 export function handleAuthError(error: unknown) {
   if (error instanceof ApiError && error.status === 401) {
@@ -102,7 +104,7 @@ export function useUploads() {
     queryFn: listUploads,
     refetchInterval: (query) => {
       const data = query.state.data as UploadList | undefined
-      return pollInterval(!!data?.items.some((u) => UPLOAD_IN_FLIGHT.has(u.status)))
+      return pollInterval(!!data?.items.some(isUploadInFlight))
     },
   })
 }
@@ -120,13 +122,37 @@ export function upsertUpload(upload: Upload) {
   })
 }
 
+/** Drops an upload that left the intake queue, and the forms that left the list with it. */
+export function dropUpload(uploadId: string, formIds: string[]) {
+  queryClient.setQueryData<UploadList>(keys.uploads, (old) =>
+    old && { items: old.items.filter((u) => u.id !== uploadId) },
+  )
+  dropForms(formIds)
+}
+
+/** Forms that left the records list (moved to the trash, or deleted with their file). */
+export function dropForms(formIds: string[]) {
+  if (!formIds.length) return
+  const gone = new Set(formIds)
+  queryClient.setQueryData<FormList>(keys.forms, (old) => old && { items: old.items.filter((f) => !gone.has(f.id)) })
+  formIds.forEach((id) => queryClient.removeQueries({ queryKey: keys.form(id), exact: true }))
+  void queryClient.invalidateQueries({ queryKey: keys.trash, exact: true })
+}
+
+/** The trash: forms deleted in the last 30 days, newest first. */
+export function useTrash() {
+  return useQuery({ queryKey: keys.trash, queryFn: listTrash })
+}
+
 /** Replaces (or adds) one form in the cached list and refreshes its open detail view. */
 export function upsertForm(form: FormSummary) {
+  if (form.deleted_at) return dropForms([form.id])   // in the trash: not part of the records list
   queryClient.setQueryData<FormList>(keys.forms, (old) => {
     if (!old) return old
-    const items = old.items.filter((f) => f.id !== form.id)
-    items.push(form)
-    return { items: items.sort(newestFirst) }
+    // An updated form keeps its place (approving a row must not move it); a new one is added.
+    const i = old.items.findIndex((f) => f.id === form.id)
+    if (i >= 0) return { items: old.items.map((f, j) => (j === i ? form : f)) }
+    return { items: [...old.items, form].sort(newestFirst) }
   })
   void queryClient.invalidateQueries({ queryKey: keys.form(form.id), exact: true })
 }

@@ -1,15 +1,12 @@
 import { CircleAlert, ClipboardCheck, Inbox, RefreshCw } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { useDismissals, useForms } from '../api/queries'
+import { useForms } from '../api/queries'
 import { BrandRings, RingsLoader } from '../components/BrandRings'
 import { EmptyState } from '../components/EmptyState'
 import { formatNumber } from '../lib/format'
 import { useNow } from '../lib/useNow'
-import { DuplicatesButton, DuplicatesPanel } from '../records/DuplicatesPanel'
-import { findDuplicates, type DuplicateGroup } from '../records/duplicates'
-import { recordLink, sortForms } from '../records/filters'
-import { MergeDialog } from '../records/MergeDialog'
+import { sortForms } from '../records/filters'
 import { Overview } from '../records/Overview'
 
 const longDate = new Intl.DateTimeFormat('he-IL', {
@@ -24,12 +21,6 @@ export function OverviewPage() {
   const navigate = useNavigate()
   const forms = useForms()
   const all = useMemo(() => forms.data?.items ?? [], [forms.data])
-  const dismissals = useDismissals()
-  const dismissed = useMemo(() => dismissals.data ?? new Set<string>(), [dismissals.data])
-  const groups = useMemo(() => findDuplicates(all, dismissed), [all, dismissed])
-  const [dupsOpen, setDupsOpen] = useState(false)
-  const [merging, setMerging] = useState<DuplicateGroup | null>(null)
-  const [announcement, setAnnouncement] = useState('')
   const now = useNow(60_000)
 
   const pending = useMemo(
@@ -52,7 +43,6 @@ export function OverviewPage() {
           <p>{longDate.format(now)}</p>
         </div>
         <div className="page-head-actions">
-          <DuplicatesButton count={groups.length} open={dupsOpen} onToggle={() => setDupsOpen((o) => !o)} />
           <button type="button" className="btn btn-primary" onClick={startReview} disabled={pending.length === 0}>
             <ClipboardCheck size={18} aria-hidden="true" />
             ממתינים לבדיקה
@@ -60,20 +50,6 @@ export function OverviewPage() {
           </button>
         </div>
       </div>
-
-      <p className="visually-hidden" aria-live="polite">
-        {announcement}
-      </p>
-
-      {dupsOpen && (
-        <DuplicatesPanel
-          groups={groups}
-          onClose={() => setDupsOpen(false)}
-          onMerge={setMerging}
-          onAnnounce={setAnnouncement}
-          onOpen={(id) => navigate(recordLink(id))}
-        />
-      )}
 
       {forms.isPending ? (
         <div className="records-loading" role="status">
@@ -110,18 +86,6 @@ export function OverviewPage() {
           forms={all}
           onSelectDay={(day) => navigate(`/records?from=${day}&to=${day}`)}
           onStartReview={startReview}
-        />
-      )}
-
-      {merging && (
-        <MergeDialog
-          key={merging.key}
-          group={merging}
-          onClose={() => setMerging(null)}
-          onMerged={(message) => {
-            setMerging(null)
-            setAnnouncement(message)
-          }}
         />
       )}
     </>

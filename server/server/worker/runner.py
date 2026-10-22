@@ -3,7 +3,7 @@
 import logging
 import threading
 
-from .. import db, settings
+from .. import crypto, db, settings, trash
 from ..times import iso, utcnow
 from . import cleanup, is_paused, reader, resume_if_due, splitter, wait_for_work, wake
 
@@ -65,6 +65,8 @@ def _cleanup_loop():
         try:
             cleanup.delete_old_images()
             cleanup.delete_old_thumbnails()
+            trash.purge()
+            crypto.sweep_file_keys()   # המפתחות של הקבצים שנמחקו: בלעדיהם שאריות בדיסק לא ניתנות לפענוח
         except Exception as e:
             log.error("מחיקת תמונות: שגיאה לא צפויה (%s)", type(e).__name__)
         _stop.wait(settings.CLEANUP_INTERVAL_SECONDS)

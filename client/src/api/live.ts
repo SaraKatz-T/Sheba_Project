@@ -2,7 +2,7 @@
 // replaces its copy. After each (re)connect the lists are reloaded, so messages missed
 // while disconnected do not matter; while disconnected the queries fall back to polling.
 import { API_BASE } from './client'
-import { addDismissal, keys, queryClient, upsertForm, upsertUpload } from './queries'
+import { addDismissal, dropForms, dropUpload, keys, queryClient, upsertForm, upsertUpload } from './queries'
 import { setLiveStatus } from './liveStatus'
 import type { LiveEvent } from './types'
 
@@ -23,6 +23,8 @@ function apply(event: LiveEvent) {
   if (event.type === 'upload.updated') upsertUpload(event.upload)
   else if (event.type === 'form.updated') upsertForm(event.form)
   else if (event.type === 'duplicate_dismissal.created') addDismissal(event.dismissal)
+  else if (event.type === 'upload.removed') dropUpload(event.upload_id, event.form_ids)
+  else if (event.type === 'form.deleted') dropForms(event.form_ids)
 }
 
 function connect() {

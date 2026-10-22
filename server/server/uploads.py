@@ -4,14 +4,13 @@
 """
 
 import hashlib
-import os
 import re
 import secrets
 from datetime import timedelta
 
 from fastapi import UploadFile
 
-from . import db, eta, events, filetypes, settings, thumbnails, worker
+from . import crypto, db, eta, events, filetypes, settings, thumbnails, worker
 from .errors import ApiError
 from .models import Upload
 from .times import iso, utcnow
@@ -25,10 +24,10 @@ def _uploads_dir():
 
 def queue_position(conn, row) -> int | None:
     """כמה קבצים לפניו בתור הפיצול, כולל הוא עצמו (1 = הבא). רק בסטטוס queued."""
-    if row["status"] != "queued":
+    if row["status"] != "queued" or row["paused"]:
         return None
     ahead = conn.execute(
-        "SELECT COUNT(*) FROM uploads WHERE status = 'queued' AND (queued_at < ? OR (queued_at = ? AND id < ?))",
+        "SELECT COUNT(*) FROM uploads WHERE status = 'queued' AND paused = 0 AND (queued_at < ? OR (queued_at = ? AND id < ?))",
         (row["queued_at"], row["queued_at"], row["id"])).fetchone()[0]
     return ahead + 1
 
@@ -44,7 +43,7 @@ def load_upload(conn, upload_id: str) -> Upload | None:
     form_count = None if row["page_count"] is None else len(form_ids)
     return Upload(
         id=row["id"], file_name=row["file_name"], file_type=row["file_type"], file_size=row["file_size"],
-        file_sha256=row["file_sha256"], source=row["source"], status=row["status"],
+        file_sha256=row["file_sha256"], source=row["source"], status=row["status"], paused=bool(row["paused"]),
         received_at=row["received_at"], updated_at=row["updated_at"],
         page_count=row["page_count"], form_count=form_count, form_ids=form_ids,
         queue_position=queue_position(conn, row), eta_at=eta.eta_at(conn, row),
@@ -54,30 +53,28 @@ def load_upload(conn, upload_id: str) -> Upload | None:
 
 
 def list_uploads(conn) -> list[Upload]:
-    """כל הקבצים מ-24 השעות האחרונות, מהחדש לישן."""
+    """כל הקבצים מ-24 השעות האחרונות, מהחדש לישן. קובץ שהוסר מהתור לא מופיע."""
     since = iso(utcnow() - timedelta(hours=24))
     ids = [r["id"] for r in conn.execute(
-        "SELECT id FROM uploads WHERE received_at >= ? ORDER BY received_at DESC, queued_at DESC", (since,))]
+        "SELECT id FROM uploads WHERE received_at >= ? AND removed_at IS NULL ORDER BY received_at DESC, queued_at DESC", (since,))]
     return [load_upload(conn, upload_id) for upload_id in ids]
 
 
 def _save_file(upload_id: str, ext: str, data: bytes) -> str:
-    """שומר את הקובץ בתיקייה משלו (מחוץ לכל תיקייה ציבורית). מחזיר נתיב יחסי ל-storage."""
+    """שומר את הקובץ, מוצפן, בתיקייה משלו (מחוץ לכל תיקייה ציבורית). מחזיר נתיב יחסי ל-storage."""
     folder = _uploads_dir() / upload_id
     folder.mkdir(parents=True)
     target = folder / f"original{ext}"
-    partial = folder / f"original{ext}.part"
-    partial.write_bytes(data)
-    os.replace(partial, target)   # הקובץ מופיע בשמו הסופי רק כשהוא שלם
+    crypto.write_file(target, data)   # הקובץ מופיע בשמו הסופי רק כשהוא שלם
     return target.relative_to(settings.STORAGE_DIR).as_posix()
 
 
-def _save_thumbnail(upload_id: str, stored_path: str, file_type: str) -> str | None:
-    data = thumbnails.make(settings.STORAGE_DIR / stored_path, file_type)
-    if data is None:
+def _save_thumbnail(upload_id: str, data: bytes, file_type: str) -> str | None:
+    thumbnail = thumbnails.make(data, file_type)
+    if thumbnail is None:
         return None
     target = _uploads_dir() / upload_id / "thumbnail.jpg"
-    target.write_bytes(data)
+    crypto.write_file(target, thumbnail)
     return target.relative_to(settings.STORAGE_DIR).as_posix()
 
 
@@ -108,7 +105,7 @@ def receive(file: UploadFile, sha256: str, source: str, force: bool) -> Upload:
 
     upload_id = "u_" + secrets.token_hex(6)
     stored_path = _save_file(upload_id, filetypes.EXTENSIONS[file_type], data)
-    thumbnail_path = _save_thumbnail(upload_id, stored_path, file_type)   # לפני התור, כדי שתוצג כבר בהמתנה
+    thumbnail_path = _save_thumbnail(upload_id, data, file_type)   # לפני התור, כדי שתוצג כבר בהמתנה
     now = utcnow()
     file_name = (file.filename or "ללא שם")[:255]
     with db.connect() as conn:
@@ -116,7 +113,7 @@ def receive(file: UploadFile, sha256: str, source: str, force: bool) -> Upload:
             "INSERT INTO uploads (id, file_name, file_type, file_size, file_sha256, source, status, "
             "received_at, updated_at, stored_path, queued_at, thumbnail_path) "
             "VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?, ?, ?, ?)",
-            (upload_id, file_name, file_type, len(data), actual, source,
+            (upload_id, crypto.seal(file_name), file_type, len(data), actual, source,
              iso(now), iso(now), stored_path, now.isoformat(), thumbnail_path))
         upload = load_upload(conn, upload_id)
     events.upload_changed(upload_id)

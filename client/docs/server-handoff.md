@@ -114,6 +114,9 @@
 - `POST /api/forms/{id}/reject` עם `reason` לא חובה.
 - `POST /api/forms/{id}/retry`: טופס `failed` חוזר לתור החילוץ (בלי פיצול מחדש).
 - `POST /api/uploads/{id}/retry`: קובץ `failed` חוזר לתור הפיצול.
+- `POST /api/uploads/{id}/pause` ו-`.../resume`: "עצור" ו"המשך" (`paused` ב-Upload).
+- `DELETE /api/uploads/{id}?keep_read=true|false`: "הסר" (גם קובץ שהסתיים). שולח `upload.removed`.
+- `POST /api/forms/delete`, `POST /api/forms/restore`, `GET /api/forms/trash`: סל המחזור. נמחק לתמיד אחרי 30 יום.
 - `POST /api/forms/{id}/merge` עם `{into, values}`.
 - **החלטות על כפילויות (חדש בגרסה 2.3):** `GET /api/duplicate-dismissals` מחזיר את כל ההחלטות. `POST /api/duplicate-dismissals` עם `{form_ids}` ממיין, מסיר כפולים, שומר (או מחזיר את הקיימת), ומשדר `duplicate_dismissal.created`. טבלה פשוטה: `id`, `form_ids` (JSON ממוין), `dismissed_at`.
 

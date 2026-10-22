@@ -70,6 +70,8 @@ export function Popover({ label, active, title, align = 'start', className, chil
         <div
           id={panelId}
           ref={panelRef}
+          // Focusable, so a click on an option's text keeps focus inside and doesn't close the panel.
+          tabIndex={-1}
           className={`popover-panel${align === 'end' ? ' is-end' : ''}`}
           role="dialog"
           aria-label={title}

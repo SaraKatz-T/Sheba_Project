@@ -24,6 +24,12 @@
         },
         "issue": {
           "type": "string"
+        },
+        "box": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
         }
       },
       "required": [
@@ -31,7 +37,8 @@
         "raw_text",
         "found",
         "confidence",
-        "issue"
+        "issue",
+        "box"
       ]
     },
     "last_name": {
@@ -57,6 +64,12 @@
         },
         "issue": {
           "type": "string"
+        },
+        "box": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
         }
       },
       "required": [
@@ -64,7 +77,8 @@
         "raw_text",
         "found",
         "confidence",
-        "issue"
+        "issue",
+        "box"
       ]
     }
   },

@@ -20,6 +20,8 @@ DEFAULT_CODES = {
     415: "unsupported_type",
     429: "too_many_attempts",
     500: "server_error",
+    502: "upstream_failed",
+    503: "not_configured",
 }
 
 

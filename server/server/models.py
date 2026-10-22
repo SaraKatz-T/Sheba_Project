@@ -1,4 +1,4 @@
-"""מבני הבקשות והתשובות, בשמות השדות של החוזה (api-contract.md גרסה 2.3 / src/api/types.ts)."""
+"""מבני הבקשות והתשובות, בשמות השדות של החוזה (api-contract.md גרסה 2.6 / src/api/types.ts)."""
 
 from typing import Literal
 
@@ -28,6 +28,7 @@ class Upload(BaseModel):
     file_sha256: str
     source: FormSource
     status: UploadStatus
+    paused: bool                 # המשתמש עצר את העיבוד; הסטטוס נשאר כמו שהיה
     received_at: str
     updated_at: str
     page_count: int | None
@@ -73,6 +74,7 @@ class FormSummary(BaseModel):
     progress: Progress | None
     error: str | None
     merged_into: str | None
+    deleted_at: str | None = None   # בסל המחזור מאז; null = לא נמחק
 
 
 class FormList(BaseModel):
@@ -124,6 +126,10 @@ class RejectRequest(BaseModel):
     reason: str | None = PydanticField(default=None, max_length=1000)
 
 
+class FormIdsRequest(BaseModel):
+    form_ids: list[str] = PydanticField(min_length=1, max_length=5000)
+
+
 class MergeRequest(BaseModel):
     into: str
     values: dict[str, str] = {}
@@ -156,3 +162,8 @@ class CaptureUploadResult(BaseModel):
     """בכוונה בלי נתונים אישיים: הטלפון לא נכנס בסיסמה."""
     id: str
     status: UploadStatus
+
+
+class ExportResult(BaseModel):
+    sent_to: str
+    form_count: int

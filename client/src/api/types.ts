@@ -45,6 +45,8 @@ export interface Upload {
   file_sha256: string
   source: FormSource
   status: UploadStatus
+  /** The user stopped processing ("עצור"); status keeps its value until "המשך". */
+  paused: boolean
   received_at: string
   updated_at: string
   page_count: number | null
@@ -92,6 +94,8 @@ export interface FormSummary {
   progress: Progress | null
   error: string | null
   merged_into: string | null
+  /** In the trash since then; null when not deleted. Deleted for good 30 days later. */
+  deleted_at?: string | null
 }
 
 /** Fractions (0–1) of the page size; x/y is the top-left corner. Pages start at 1. */
@@ -148,6 +152,12 @@ export interface CaptureUploadResult {
   status: UploadStatus
 }
 
+/** Where the server sent the exported .xlsx (for now an email address; later the lab's API). */
+export interface ExportResult {
+  sent_to: string
+  form_count: number
+}
+
 /** "These forms are fine as they are": a duplicate group the user chose to keep. */
 export interface DuplicateDismissal {
   form_ids: string[]
@@ -159,6 +169,10 @@ export type LiveEvent =
   | { type: 'upload.updated'; upload: Upload }
   | { type: 'form.updated'; form: FormSummary }
   | { type: 'duplicate_dismissal.created'; dismissal: DuplicateDismissal }
+  /** The upload left the intake queue; form_ids are the forms that were deleted with it. */
+  | { type: 'upload.removed'; upload_id: string; form_ids: string[] }
+  /** The forms moved to the trash. */
+  | { type: 'form.deleted'; form_ids: string[] }
 
 export interface ExistingUpload {
   id: string

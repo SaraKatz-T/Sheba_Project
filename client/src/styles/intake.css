@@ -433,17 +433,41 @@
   inset-block: 0;
   inset-inline-start: 0;
   border-radius: inherit;
-  background: var(--brand-500);
+  /* The two rings of the Sheba logo, flowing along the bar while it works */
+  background: linear-gradient(to left, var(--pink), var(--teal-logo), var(--pink));
+  background-size: 200% 100%;
+  animation: bar-flow 2.4s linear infinite;
   transition: width 400ms var(--ease);
+}
+
+@keyframes bar-flow {
+  from {
+    background-position: 0% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
 }
 
 .bar-ok > span {
   background: var(--teal);
+  animation: none;
+}
+
+.bar-waiting > span {
+  background: var(--ink-300);
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar > span {
+    animation: none;
+  }
 }
 
 .bar-indeterminate > span {
   width: 35%;
-  background: linear-gradient(to left, transparent, var(--brand-500), transparent);
+  background: linear-gradient(to left, transparent, var(--pink), var(--teal-logo), transparent);
   animation: indeterminate 1.3s var(--ease) infinite;
 }
 
@@ -556,5 +580,25 @@
   }
   .live-dot {
     margin-inline-start: 0;
+  }
+}
+
+/* Remove-file dialog: a short question, narrower than the merge dialog */
+.dialog.dialog-sm {
+  width: min(560px, calc(100vw - 32px));
+}
+
+.dialog-sm .dialog-foot {
+  align-items: center;
+}
+
+.dialog-sm .dialog-foot .btn {
+  white-space: nowrap;
+}
+
+/* On a phone the three buttons do not fit in one row */
+@media (max-width: 560px) {
+  .dialog-sm .dialog-foot {
+    flex-wrap: wrap;
   }
 }

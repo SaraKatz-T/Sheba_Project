@@ -10,8 +10,7 @@ import { buildRows, describe } from '../intake/rows'
 import { UploadRow } from '../intake/UploadRow'
 import { addFiles, isLocalBusy, useLocalQueue } from '../intake/uploadQueue'
 import { filesFromDrop, namePastedFile } from '../lib/files'
-import { formatEta, formatNumber } from '../lib/format'
-import { useNow } from '../lib/useNow'
+import { formatNumber } from '../lib/format'
 
 function plural(n: number, one: string, many: string) {
   return n === 1 ? one : `${formatNumber(n)} ${many}`
@@ -36,9 +35,6 @@ export function IntakePage() {
   const active = views.filter((v) => !v.view.finished)
   // Files sent from this screen in this session that have finished.
   const doneHere = views.filter((v) => v.view.finished && v.row.local).length
-  const etas = active.map((v) => v.view.etaAt).filter((e): e is string => !!e)
-  const now = useNow(1000, etas.length > 0)
-  const overallEta = etas.length ? etas.reduce((a, b) => (a > b ? a : b)) : null
 
   const add = useCallback((files: File[]) => {
     if (files.length === 0) return
@@ -156,7 +152,6 @@ export function IntakePage() {
           <header className="queue-head">
             <h2 id="queue-active">בטיפול</h2>
             {summary.length > 0 && <span className="queue-summary">{summary.join(' · ')}</span>}
-            {overallEta && <span className="queue-eta">סיום משוער: {formatEta(overallEta, now)}</span>}
             {live === 'offline' && (
               <span className="live-dot live-offline">
                 <WifiOff size={14} aria-hidden="true" />
@@ -166,7 +161,7 @@ export function IntakePage() {
           </header>
           <ul className="up-list">
             {active.map(({ row, view }) => (
-              <UploadRow key={row.key} row={row} view={view} now={now} />
+              <UploadRow key={row.key} row={row} view={view} />
             ))}
           </ul>
         </section>
@@ -177,15 +172,15 @@ export function IntakePage() {
         <p className="queue-done">
           <CircleCheck size={18} aria-hidden="true" />
           {doneHere === 1 ? 'קובץ אחד הסתיים' : `${formatNumber(doneHere)} קבצים הסתיימו`} ונמצא{doneHere === 1 ? '' : 'ים'} עכשיו
-          ברשומות.
-          <Link to="/records">לרשומות</Link>
+          בעמוד הטפסים.
+          <Link to="/records">לטפסים</Link>
         </p>
       ) : (
         active.length === 0 &&
         !uploads.isPending && (
           <p className="queue-empty">
             <Inbox size={18} aria-hidden="true" />
-            אין קבצים בטיפול כרגע. טפסים שכבר נקלטו נמצאים <Link to="/records">ברשומות</Link>.
+            אין קבצים בטיפול כרגע. טפסים שכבר נקלטו נמצאים <Link to="/records">בעמוד הטפסים</Link>.
           </p>
         )
       )}

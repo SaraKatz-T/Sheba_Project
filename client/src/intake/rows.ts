@@ -28,6 +28,7 @@ export interface RowView {
 }
 
 const FORM_DONE = new Set(['pending_review', 'approved', 'rejected', 'failed'])
+const ACTIVE = new Set(['queued', 'splitting', 'processing'])
 
 export const formPercent = (f: FormSummary) => (FORM_DONE.has(f.status) ? 100 : (f.progress?.percent ?? 0))
 
@@ -104,6 +105,13 @@ export function describe(row: Row): RowView {
   }
 
   const etaAt = upload.eta_at
+  if (upload.paused && ACTIVE.has(upload.status)) {
+    const count = upload.form_count ?? forms.length
+    const ready = forms.filter((f) => FORM_DONE.has(f.status)).length
+    const status = count ? `נעצר · ${ready} מתוך ${count} טפסים מוכנים` : 'נעצר'
+    const progress = forms.length ? forms.reduce((s, f) => s + formPercent(f), 0) / forms.length : null
+    return { tone: 'waiting', status, progress, etaAt: null, finished: false, needsAction: false }
+  }
   switch (upload.status) {
     case 'queued': {
       const pos = upload.queue_position

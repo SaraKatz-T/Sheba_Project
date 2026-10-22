@@ -110,7 +110,32 @@ export const listUploads = () =>
 export const getUpload = (id: string) => uploads.get(id)
 
 export const listForms = () =>
-  [...forms.values()].sort((a, b) => b.received_at.localeCompare(a.received_at))
+  [...forms.values()].filter((f) => !f.deleted_at).sort((a, b) => b.received_at.localeCompare(a.received_at))
+
+/** The trash: deleted forms, newest deletion first. */
+export const listTrash = () =>
+  [...forms.values()].filter((f) => f.deleted_at).sort((a, b) => b.deleted_at!.localeCompare(a.deleted_at!))
+
+/** Moves forms to the trash; null if one is unknown or still being read. */
+export function deleteForms(ids: string[]): StoredForm[] | null {
+  const list = ids.map((id) => forms.get(id))
+  if (list.some((f) => !f || f.status === 'received' || f.status === 'processing')) return null
+  const now = nowIso()
+  for (const f of list as StoredForm[]) f.deleted_at ??= now
+  const event: LiveEvent = { type: 'form.deleted', form_ids: ids }
+  listeners.forEach((l) => l(event))
+  return list as StoredForm[]
+}
+
+export function restoreForms(ids: string[]): StoredForm[] | null {
+  const list = ids.map((id) => forms.get(id))
+  if (list.some((f) => !f)) return null
+  for (const f of list as StoredForm[]) {
+    f.deleted_at = null
+    emitForm(f)
+  }
+  return list as StoredForm[]
+}
 
 export const getForm = (id: string) => forms.get(id)
 
@@ -225,6 +250,7 @@ function pumpUploads() {
 
   setTimeout(() => {
     splitting = false
+    if (!uploads.has(upload.id)) return pumpUploads()   // removed while splitting
     if (FAIL_NAME.test(upload.file_name) && !healed.has(upload.id)) {
       upload.status = 'failed'
       upload.eta_at = null
@@ -295,10 +321,39 @@ function newForm(upload: StoredUpload, pageNumbers: number[], seed: number): Sto
 }
 
 function pumpForms() {
-  while (activeFormJobs < FORM_WORKERS && formQueue.length > 0) {
-    const form = forms.get(formQueue.shift()!)
+  while (activeFormJobs < FORM_WORKERS) {
+    // Forms of a paused upload wait in the queue until it resumes.
+    const i = formQueue.findIndex((id) => !uploads.get(forms.get(id)?.upload_id ?? '')?.paused)
+    if (i < 0) return
+    const form = forms.get(formQueue.splice(i, 1)[0])
     if (form) runForm(form)
   }
+}
+
+/** "עצור" / "המשך". A form already being read finishes; the rest wait. */
+export function setPaused(upload: StoredUpload, paused: boolean) {
+  upload.paused = paused
+  upload.eta_at = paused ? null : etaFor(upload)
+  emitUpload(upload)
+  if (!paused) pumpForms()
+}
+
+const READ_STATUSES = new Set(['pending_review', 'approved', 'rejected'])
+
+/** "הסר": drops the upload from the intake list; keepRead keeps the forms that were already read. */
+export function removeUpload(upload: StoredUpload, keepRead: boolean): string[] {
+  const deleted = upload.form_ids.filter((id) => !keepRead || !READ_STATUSES.has(forms.get(id)?.status ?? ''))
+  deleted.forEach((id) => forms.delete(id))
+  for (const queue of [formQueue, uploadQueue]) {
+    for (let i = queue.length - 1; i >= 0; i--) {
+      if (deleted.includes(queue[i]) || queue[i] === upload.id) queue.splice(i, 1)
+    }
+  }
+  uploads.delete(upload.id)
+  const event: LiveEvent = { type: 'upload.removed', upload_id: upload.id, form_ids: deleted }
+  listeners.forEach((l) => l(event))
+  refreshQueuePositions()
+  return deleted
 }
 
 function runForm(form: StoredForm) {
@@ -358,6 +413,7 @@ export async function createUpload(file: File, sha256: string, source: FormSourc
     file_sha256: sha256,
     source,
     status: 'queued',
+    paused: false,
     received_at: ts,
     updated_at: ts,
     page_count: MULTI_PAGE.test(file.type) ? 1 + (seed % 9) : 1,
@@ -504,6 +560,7 @@ function seed() {
         file_sha256: fakeSha(rng),
         source: spec.source ?? 'upload',
         status: 'done',
+        paused: false,
         received_at: received.toISOString(),
         updated_at: received.toISOString(),
         page_count: 0,

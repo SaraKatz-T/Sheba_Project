@@ -1,8 +1,7 @@
-import { Copy, Smartphone } from 'lucide-react'
+import { Smartphone } from 'lucide-react'
 import type { FormStatus, FormSummary } from '../api/types'
 import { YellowChip } from '../components/StatusChip'
 import { formatDateTime, formatNumber } from '../lib/format'
-import type { DuplicateGroup } from './duplicates'
 
 const CARDS_PER_COLUMN = 40
 
@@ -26,13 +25,12 @@ const COLUMNS: ColumnDef[] = [
 interface Props {
   forms: FormSummary[]
   visibleStatuses: FormStatus[]
-  duplicates: Map<string, DuplicateGroup>
   onShowColumn: (statuses: FormStatus[]) => void
   /** Opens the record in place in the table. */
   onOpen: (id: string) => void
 }
 
-export function KanbanBoard({ forms, visibleStatuses, duplicates, onShowColumn, onOpen }: Props) {
+export function KanbanBoard({ forms, visibleStatuses, onShowColumn, onOpen }: Props) {
   const columns = visibleStatuses.length
     ? COLUMNS.filter((c) => c.statuses.some((s) => visibleStatuses.includes(s)))
     : COLUMNS
@@ -74,15 +72,9 @@ export function KanbanBoard({ forms, visibleStatuses, duplicates, onShowColumn, 
                         {f.source === 'phone' && <Smartphone size={13} aria-label="צולם בטלפון" />}
                         {formatDateTime(f.received_at)}
                       </span>
-                      {((f.status === 'pending_review' && f.uncertain_count > 0) || duplicates.has(f.id)) && (
+                      {f.status === 'pending_review' && f.uncertain_count > 0 && (
                         <span className="board-card-chips">
-                          {f.status === 'pending_review' && <YellowChip count={f.uncertain_count} />}
-                          {duplicates.has(f.id) && (
-                            <span className="chip chip-pending">
-                              <Copy size={12} aria-hidden="true" />
-                              כפילות
-                            </span>
-                          )}
+                          <YellowChip count={f.uncertain_count} />
                         </span>
                       )}
                       {f.status === 'failed' && f.error && <span className="board-card-error">{f.error}</span>}

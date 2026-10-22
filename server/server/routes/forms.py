@@ -1,13 +1,13 @@
-"""טפסים (שורות): קריאה, תמונת עמוד, תיקון שדה, אישור, דחייה, ניסיון חוזר ומיזוג."""
+"""טפסים (שורות): קריאה, תמונת עמוד, תיקון שדה, אישור, דחייה, ניסיון חוזר, מיזוג, ומחיקה לסל המחזור ושחזור."""
 
-from fastapi import APIRouter, Depends
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, Response
 
-from .. import db, events, review, settings
+from .. import crypto, db, events, review, settings, trash
 from ..auth import require_session
 from ..errors import ApiError
-from ..forms import field_from_row, list_forms, load_form, load_form_detail
-from ..models import Field, FieldUpdate, FormDetail, FormList, FormSummary, MergeRequest, RejectRequest
+from ..forms import field_from_row, list_forms, list_trash, load_form, load_form_detail
+from ..models import (Field, FieldUpdate, FormDetail, FormIdsRequest, FormList, FormSummary, MergeRequest,
+                      RejectRequest)
 
 router = APIRouter(prefix="/api/forms", tags=["forms"], dependencies=[Depends(require_session)])
 
@@ -23,6 +23,31 @@ def get_forms():
         return FormList(items=list_forms(conn))
 
 
+@router.get("/trash", response_model=FormList)
+def get_trash():
+    with db.connect() as conn:
+        return FormList(items=list_trash(conn))
+
+
+@router.post("/delete", response_model=FormList)
+def delete_forms(body: FormIdsRequest):
+    """מעביר לסל המחזור. מחזיר את הרשומות כפי שהן עכשיו (עם deleted_at)."""
+    with db.connect() as conn:
+        deleted = trash.delete(conn, body.form_ids)
+    trash.publish_deleted(deleted)
+    with db.connect() as conn:
+        return FormList(items=[load_form(conn, i) for i in body.form_ids])
+
+
+@router.post("/restore", response_model=FormList)
+def restore_forms(body: FormIdsRequest):
+    with db.connect() as conn:
+        restored = trash.restore(conn, body.form_ids)
+    _publish(restored)   # form.updated: הרשומה חוזרת לרשימה
+    with db.connect() as conn:
+        return FormList(items=[load_form(conn, i) for i in restored])
+
+
 @router.get("/{form_id}", response_model=FormDetail)
 def get_form(form_id: str):
     with db.connect() as conn:
@@ -32,7 +57,7 @@ def get_form(form_id: str):
     return form
 
 
-@router.get("/{form_id}/pages/{number}/image", response_class=FileResponse)
+@router.get("/{form_id}/pages/{number}/image", response_class=Response)
 def get_page_image(form_id: str, number: int):
     with db.connect() as conn:
         row = conn.execute("SELECT p.image_path FROM forms f JOIN pages p "
@@ -42,7 +67,11 @@ def get_page_image(form_id: str, number: int):
         raise ApiError(404)
     if not row["image_path"]:
         raise ApiError(404, "image_deleted", "התמונה נמחקה 24 שעות אחרי האישור.")
-    return FileResponse(settings.STORAGE_DIR / row["image_path"], media_type="image/png")
+    try:
+        data = crypto.read_file(settings.STORAGE_DIR / row["image_path"])   # מפוענח בזיכרון בלבד
+    except (OSError, crypto.CryptoError):
+        raise ApiError(404, "image_deleted", "התמונה לא זמינה.")
+    return Response(data, media_type="image/png")
 
 
 @router.patch("/{form_id}/fields/{key}", response_model=Field)

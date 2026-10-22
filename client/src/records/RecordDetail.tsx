@@ -2,7 +2,7 @@
 // each with a slice of the real form), every other field as plain text, and the whole
 // form small at the side; zoom only when asked for.
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Check, CircleAlert, LoaderCircle, RotateCcw, X, ZoomIn } from 'lucide-react'
+import { Check, CircleAlert, LoaderCircle, RotateCcw, Trash2, X, ZoomIn } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { Link } from 'react-router'
@@ -24,6 +24,8 @@ interface Props {
   nextPending: (afterId: string) => string | null
   onDone: (nextId: string | null, message: string) => void
   onClose: () => void
+  /** Asks to move this record to the trash. */
+  onDelete: () => void
 }
 
 function withCounts(form: FormDetail): FormDetail {
@@ -65,12 +67,14 @@ function FormThumb({ form, marks, cache, onOpen }: { form: FormDetail; marks: Fo
   )
 }
 
-export function RecordDetail({ id, nextPending, onDone, onClose }: Props) {
+export function RecordDetail({ id, nextPending, onDone, onClose, onDelete }: Props) {
   const detail = useQuery({ queryKey: keys.form(id), queryFn: () => getForm(id) })
   const form = detail.data
   const cache = usePageImageCache()
 
   const pending = form?.status === 'pending_review'
+  // An approved form stays approved, but its fields can still be corrected.
+  const editable = pending || form?.status === 'approved'
 
   // Fields that needed checking when the record opened stay amber (marked done once
   // handled) so the reviewer keeps the context; only they are editable.
@@ -294,7 +298,7 @@ export function RecordDetail({ id, nextPending, onDone, onClose }: Props) {
         {plainFields.length > 0 && (
           <dl className="pfields">
             {plainFields.map((f) => (
-              <PlainField key={f.key} field={f} onSave={pending ? saveField : undefined} />
+              <PlainField key={f.key} field={f} onSave={editable ? saveField : undefined} />
             ))}
           </dl>
         )}
@@ -332,10 +336,16 @@ export function RecordDetail({ id, nextPending, onDone, onClose }: Props) {
       </div>
 
       <aside className="detail-side">
-        <button type="button" className="icon-btn detail-close" onClick={onClose} aria-label="סגירת הרשומה" title="סגירה (Esc)">
+        <button type="button" className="icon-btn detail-close" onClick={onClose} aria-label="סגירת הטופס" title="סגירה (Esc)">
           <X size={18} />
         </button>
         <FormThumb form={form} marks={markFields} cache={cache} onOpen={() => showViewer(reviewFields.find((f) => f.uncertain && f.box)?.key ?? null)} />
+        {form.status !== 'received' && form.status !== 'processing' && (
+          <button type="button" className="btn btn-sm btn-quiet detail-delete" onClick={onDelete}>
+            <Trash2 size={15} aria-hidden="true" />
+            מחיקת הטופס
+          </button>
+        )}
       </aside>
 
       {viewer && (

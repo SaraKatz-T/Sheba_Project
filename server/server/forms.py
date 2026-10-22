@@ -70,7 +70,7 @@ def _summary(row, fields) -> FormSummary:
         uncertain_keys=[f["key"] for f in fields if f["uncertain"]],   # לסימון התאים הצהובים בטבלה
         corrected_count=sum(1 for f in fields if f["corrected"]),
         progress=Progress(**json.loads(row["progress"])) if row["progress"] else None,
-        error=row["error"], merged_into=row["merged_into"],
+        error=row["error"], merged_into=row["merged_into"], deleted_at=row["deleted_at"],
     )
 
 
@@ -86,9 +86,18 @@ def field_from_row(row) -> Field:
 
 
 def list_forms(conn) -> list[FormSummary]:
-    """כל השורות, מהחדש לישן. בתוך קובץ: לפי סדר העמודים."""
+    """כל השורות שלא נמחקו, מהחדש לישן. בתוך קובץ: לפי סדר העמודים."""
     fields = _fields_by_form(conn)
-    rows = conn.execute(f"{FORM_SQL} ORDER BY u.received_at DESC, u.queued_at DESC, f.page_number, f.position")
+    rows = conn.execute(f"{FORM_SQL} WHERE f.deleted_at IS NULL "
+                        "ORDER BY u.received_at DESC, u.queued_at DESC, f.page_number, f.position")
+    return [_summary(row, fields.get(row["id"], [])) for row in rows]
+
+
+def list_trash(conn) -> list[FormSummary]:
+    """סל המחזור: מה שנמחק לאחרונה ראשון."""
+    fields = _fields_by_form(conn)
+    rows = conn.execute(f"{FORM_SQL} WHERE f.deleted_at IS NOT NULL "
+                        "ORDER BY f.deleted_at DESC, f.page_number, f.position")
     return [_summary(row, fields.get(row["id"], [])) for row in rows]
 
 

@@ -44,9 +44,26 @@ SERVER_PORT = int(os.getenv("SERVER_PORT", "8000"))
 # --- קליטת קבצים ---
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 
+# --- שליחת הייצוא למעבדה ---
+# עד שיהיה API של המעבדה, קובץ האקסל נשלח במייל דרך Resend (resend.com).
+# בלי דומיין מאומת, Resend שולח רק לכתובת שאיתה נרשמו אליו
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+EXPORT_EMAIL_TO = os.getenv("EXPORT_EMAIL_TO", "")
+EXPORT_EMAIL_FROM = os.getenv("EXPORT_EMAIL_FROM", "Sheba Forms <onboarding@resend.dev>")
+# קובץ האקסל שנשלח מוצפן בסיסמה הזו (ההצפנה המובנית של אקסל). את הסיסמה מוסרים למעבדה בטלפון, לא במייל
+EXPORT_FILE_PASSWORD = os.getenv("EXPORT_FILE_PASSWORD", "")
+
+# --- הצפנת הנתונים בדיסק (crypto.py) ---
+# מפתח־העל: base64 של 32 בתים. נוצר ב-run_encrypt_setup.py. בלעדיו אי אפשר לקרוא שום נתון,
+# ולכן צריך לשמור עותק שלו במקום בטוח (מנהל סיסמאות), נפרד מהגיבויים של הנתונים.
+# בענן: לשמור אותו בכספת המפתחות של הענן, לא בקובץ
+DATA_KEY = os.getenv("DATA_KEY", "")
+DATA_KEY_PREVIOUS = os.getenv("DATA_KEY_PREVIOUS", "")   # רק בזמן החלפת מפתח־העל
+
 # --- תור ועובדים ---
 WORKERS_ENABLED = _flag("WORKERS_ENABLED", True)   # false = השרת רק קולט, בלי לעבד (לבדיקות)
 READ_WORKERS = int(os.getenv("READ_WORKERS", "4"))   # עמודים שנקראים במקביל. 4 = אחד לכל מפתח Gemini
+SPLIT_THREADS = int(os.getenv("SPLIT_THREADS", "4"))   # עמודים שמיושרים ומוקטנים במקביל בזמן הפיצול
 MAX_PAGE_ATTEMPTS = 3                  # אחרי כמה ניסיונות כושלים עמוד עובר ל-failed
 RETRY_DELAYS_SECONDS = (30, 120)       # המתנה לפני הניסיון השני והשלישי
 QUOTA_PAUSE_MINUTES = 30               # כשהמכסה של Gemini נגמרת, כל התור נעצר לזמן הזה
@@ -57,6 +74,7 @@ ETA_SAMPLE_PAGES = 20                  # הזמן הממוצע לעמוד מחו
 IMAGE_KEEP_HOURS = 24            # תמונת עמוד נמחקת כך וכך שעות אחרי שהשורה האחרונה בעמוד אושרה
 THUMBNAIL_KEEP_HOURS = 24        # התמונה המוקטנת נמחקת כך וכך שעות אחרי הקליטה (תור הקליטה מציג 24 שעות)
 CLEANUP_INTERVAL_SECONDS = 600   # כל כמה זמן בודקים אם יש תמונות למחיקה
+TRASH_KEEP_DAYS = 30            # רשומה בסל המחזור נמחקת לתמיד אחרי כך וכך ימים
 
 # --- צילום מהטלפון ---
 CAPTURE_SESSION_MINUTES = 10    # תוקף הקוד שבברקוד

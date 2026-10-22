@@ -3,6 +3,7 @@ import type {
   CaptureSession,
   CaptureUploadResult,
   DuplicateDismissal,
+  ExportResult,
   Field,
   FieldValueSource,
   FormDetail,
@@ -34,6 +35,16 @@ export const getUpload = (id: string) => request<Upload>(`/uploads/${enc(id)}`)
 export const retryUpload = (id: string) =>
   request<Upload>(`/uploads/${enc(id)}/retry`, { method: 'POST' })
 
+export const pauseUpload = (id: string) =>
+  request<Upload>(`/uploads/${enc(id)}/pause`, { method: 'POST' })
+
+export const resumeUpload = (id: string) =>
+  request<Upload>(`/uploads/${enc(id)}/resume`, { method: 'POST' })
+
+/** Stops processing for good. keepRead keeps the forms that were already read. */
+export const removeUpload = (id: string, keepRead: boolean) =>
+  request<void>(`/uploads/${enc(id)}?keep_read=${keepRead}`, { method: 'DELETE' })
+
 // Forms
 
 export const listForms = () => request<FormList>('/forms')
@@ -55,6 +66,15 @@ export const rejectForm = (id: string, reason?: string) =>
 export const retryForm = (id: string) =>
   request<FormSummary>(`/forms/${enc(id)}/retry`, { method: 'POST' })
 
+/** Moves forms to the trash (restorable for 30 days). */
+export const deleteForms = (formIds: string[]) =>
+  request<FormList>('/forms/delete', { method: 'POST', ...json({ form_ids: formIds }) })
+
+export const restoreForms = (formIds: string[]) =>
+  request<FormList>('/forms/restore', { method: 'POST', ...json({ form_ids: formIds }) })
+
+export const listTrash = () => request<FormList>('/forms/trash')
+
 export const mergeForm = (id: string, into: string, values: Record<string, string>) =>
   request<FormSummary>(`/forms/${enc(id)}/merge`, { method: 'POST', ...json({ into, values }) })
 
@@ -64,6 +84,17 @@ export const listDismissals = () => request<{ items: DuplicateDismissal[] }>('/d
 
 export const createDismissal = (formIds: string[]) =>
   request<DuplicateDismissal>('/duplicate-dismissals', { method: 'POST', ...json({ form_ids: formIds }) })
+
+// Export
+
+/** Sends the built .xlsx to the server, which forwards it to the lab. */
+export function sendExport(file: Blob, fileName: string, formCount: number) {
+  const body = new FormData()
+  body.append('file', file, 'export.xlsx')
+  body.append('file_name', fileName)
+  body.append('form_count', String(formCount))
+  return request<ExportResult>('/exports', { method: 'POST', body })
+}
 
 /** Fetches an API image (page, thumbnail) into memory only; the caller must revoke the URL. */
 export async function fetchImage(imageUrl: string, signal?: AbortSignal): Promise<string> {

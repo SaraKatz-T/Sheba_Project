@@ -4,7 +4,7 @@ import type { FormStatus } from '../api/types'
 import { Popover } from '../components/Popover'
 import { formatDate, formatNumber } from '../lib/format'
 import { israelDateKey } from '../lib/hebrewSearch'
-import { currentPreset, hasActiveFilters, presetRange, type DatePreset, type Filters } from './filters'
+import { currentPreset, defaultFilters, hasActiveFilters, presetRange, type DatePreset, type Filters } from './filters'
 
 interface StatusOption {
   label: string
@@ -172,7 +172,7 @@ export function RecordsToolbar({ filters, counts, onChange }: Props) {
 
         <Popover
           title="סינון לפי תאריך קליטה"
-          active={preset !== 'all'}
+          active={preset !== 'today' && preset !== 'all'}
           label={
             <>
               <span className="filter-button-name">תאריך קליטה:</span> {dateLabel(filters)}
@@ -236,7 +236,7 @@ export function RecordsToolbar({ filters, counts, onChange }: Props) {
             onChange={(e) => onChange({ yellow: e.target.checked })}
           />
           <span className="switch-track" aria-hidden="true" />
-          רק עם שדות צהובים
+          ממתין לבדיקה
         </label>
 
         {hasActiveFilters(filters) && (
@@ -245,7 +245,7 @@ export function RecordsToolbar({ filters, counts, onChange }: Props) {
             className="btn btn-sm btn-quiet clear-filters"
             onClick={() => {
               setCustomOpen(false)
-              onChange({ q: '', statuses: [], from: null, to: null, yellow: false })
+              onChange(defaultFilters())
             }}
           >
             <X size={16} aria-hidden="true" />

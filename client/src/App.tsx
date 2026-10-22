@@ -10,6 +10,7 @@ import { EmptyState } from './components/EmptyState'
 import { IntakePage } from './pages/IntakePage'
 import { LoginPage } from './pages/LoginPage'
 import { RecordsPage } from './pages/RecordsPage'
+import { TrashPage } from './pages/TrashPage'
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const session = useSession()
@@ -53,7 +54,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
 function ReviewRedirect() {
   const { search } = useLocation()
   const form = new URLSearchParams(search).get('form')
-  return <Navigate to={form ? `/records?open=${encodeURIComponent(form)}` : '/records?status=pending_review'} replace />
+  return <Navigate to={form ? `/records?open=${encodeURIComponent(form)}` : '/records?status=pending_review&dates=all'} replace />
 }
 
 export function App() {
@@ -75,6 +76,7 @@ export function App() {
             <Route index element={<Navigate to="/records" replace />} />
             <Route path="intake" element={<IntakePage />} />
             <Route path="records" element={<RecordsPage />} />
+            <Route path="records/trash" element={<TrashPage />} />
             {/* Review happens inside the records now; old links still land on the right record. */}
             <Route path="review" element={<ReviewRedirect />} />
           </Route>

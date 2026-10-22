@@ -4,7 +4,7 @@
 import { strToU8, zipSync } from 'fflate'
 import { israelParts, looksLikeFormula, type Cell, type ExportTable } from './table'
 
-const SHEET_NAME = 'רשומות'
+const SHEET_NAME = 'טפסים'
 
 // Style indexes in styles.xml (cellXfs).
 const STYLE = { header: 1, datetime: 2, guardedText: 3, flagged: 4, flaggedGuarded: 5 }

@@ -34,7 +34,7 @@ def seconds_per_page(conn) -> float:
 
 
 def eta_at(conn, upload_row) -> str | None:
-    if upload_row["status"] not in ACTIVE:
+    if upload_row["status"] not in ACTIVE or upload_row["paused"]:
         return None
     now = utcnow()
     per_page = seconds_per_page(conn)
@@ -43,7 +43,7 @@ def eta_at(conn, upload_row) -> str | None:
 
     # הוא עצמו והקבצים שלפניו בתור
     uploads = conn.execute(
-        "SELECT id, page_count FROM uploads WHERE status IN ('queued', 'splitting', 'processing') "
+        "SELECT id, page_count FROM uploads WHERE status IN ('queued', 'splitting', 'processing') AND paused = 0 "
         "AND (queued_at < ? OR (queued_at = ? AND id <= ?))",
         (upload_row["queued_at"], upload_row["queued_at"], upload_row["id"])).fetchall()
 

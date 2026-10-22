@@ -1,5 +1,9 @@
 // Records filters live in the URL, so a filtered view can be reloaded, shared, and
 // exported exactly as shown.
+//
+// The records screen opens on today's intake (everything older is kept, one click away in the
+// date filter). In the URL, no date means today and `dates=all` means every date. A link that
+// opens one record shows every date, so the record is always there.
 import type { FormStatus, FormSummary } from '../api/types'
 import { buildMatcher, israelDateKey } from '../lib/hebrewSearch'
 
@@ -37,8 +41,9 @@ export function readFilters(params: URLSearchParams): Filters {
     .split(',')
     .filter((s): s is FormStatus => (ALL_STATUSES as string[]).includes(s))
   const sort = params.get('sort') as SortKey | null
-  const from = params.get('from')
-  const to = params.get('to')
+  let from = params.get('from')
+  let to = params.get('to')
+  if (!from && !to && params.get('dates') !== 'all' && !params.get('open')) ({ from, to } = presetRange('today'))
   return {
     q: params.get('q') ?? '',
     statuses,
@@ -56,8 +61,11 @@ export function writeFilters(f: Filters): URLSearchParams {
   const p = new URLSearchParams()
   if (f.q.trim()) p.set('q', f.q)
   if (f.statuses.length) p.set('status', f.statuses.join(','))
-  if (f.from) p.set('from', f.from)
-  if (f.to) p.set('to', f.to)
+  if (!f.from && !f.to) p.set('dates', 'all')
+  else if (currentPreset(f) !== 'today') {
+    if (f.from) p.set('from', f.from)
+    if (f.to) p.set('to', f.to)
+  }
   if (f.yellow) p.set('yellow', '1')
   if (f.view === 'board') p.set('view', 'board')
   if (f.sort !== 'received') p.set('sort', f.sort)
@@ -69,8 +77,20 @@ export function writeFilters(f: Filters): URLSearchParams {
 /** Link that opens one record in place in the records table. */
 export const recordLink = (formId: string) => `/records?open=${encodeURIComponent(formId)}`
 
+/** The view the records screen opens on: today's intake, nothing else filtered. */
+export const defaultFilters = (): Pick<Filters, 'q' | 'statuses' | 'from' | 'to' | 'yellow'> => ({
+  q: '',
+  statuses: [],
+  ...presetRange('today'),
+  yellow: false,
+})
+
+/** Anything narrowed beyond the default view (today's date is the default, not a filter). */
 export const hasActiveFilters = (f: Filters) =>
-  !!f.q.trim() || f.statuses.length > 0 || !!f.from || !!f.to || f.yellow
+  !!f.q.trim() || f.statuses.length > 0 || (currentPreset(f) !== 'today' && currentPreset(f) !== 'all') || f.yellow
+
+/** Every date, not just today's. */
+export const showsAllDates = (f: Filters) => !f.from && !f.to
 
 /** Search, status, intake-date range and "has yellow fields", in that order. */
 export function applyFilters(forms: FormSummary[], f: Filters, opts: { ignoreStatus?: boolean } = {}) {
@@ -126,8 +146,13 @@ function compare(a: FormSummary, b: FormSummary, key: SortKey): number {
 
 export function sortForms(forms: FormSummary[], key: SortKey, dir: 'asc' | 'desc'): FormSummary[] {
   const sign = dir === 'asc' ? 1 : -1
-  // Ties fall back to newest first, so the order never jumps around.
-  return [...forms].sort((a, b) => sign * compare(a, b, key) || b.received_at.localeCompare(a.received_at))
+  // Ties fall back to newest file first, then page order within the file, so the order never jumps around.
+  return [...forms].sort(
+    (a, b) =>
+      sign * compare(a, b, key) ||
+      b.received_at.localeCompare(a.received_at) ||
+      (a.upload_pages[0] ?? 0) - (b.upload_pages[0] ?? 0),
+  )
 }
 
 const dayKey = (daysAgo: number) => israelDateKey(new Date(Date.now() - daysAgo * 86_400_000).toISOString())

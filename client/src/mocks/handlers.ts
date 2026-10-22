@@ -122,12 +122,64 @@ export const handlers = [
     return HttpResponse.json(db.uploadView(upload), { status: 202 })
   }),
 
+  http.post('/api/uploads/:id/pause', async ({ params }) => {
+    if (!isAuthed()) return unauthorized()
+    await latency()
+    const upload = db.getUpload(String(params.id))
+    if (!upload) return notFound()
+    if (!['queued', 'splitting', 'processing'].includes(upload.status)) return error(409, 'wrong_status')
+    db.setPaused(upload, true)
+    return HttpResponse.json(db.uploadView(upload))
+  }),
+
+  http.post('/api/uploads/:id/resume', async ({ params }) => {
+    if (!isAuthed()) return unauthorized()
+    await latency()
+    const upload = db.getUpload(String(params.id))
+    if (!upload) return notFound()
+    db.setPaused(upload, false)
+    return HttpResponse.json(db.uploadView(upload))
+  }),
+
+  http.delete('/api/uploads/:id', async ({ params, request }) => {
+    if (!isAuthed()) return unauthorized()
+    await latency()
+    const upload = db.getUpload(String(params.id))
+    if (!upload) return notFound()
+    db.removeUpload(upload, new URL(request.url).searchParams.get('keep_read') === 'true')
+    return new HttpResponse(null, { status: 204 })
+  }),
+
   // Forms
 
   http.get('/api/forms', async () => {
     if (!isAuthed()) return unauthorized()
     await latency()
     return HttpResponse.json({ items: db.listForms().map(db.summary) })
+  }),
+
+  http.get('/api/forms/trash', async () => {
+    if (!isAuthed()) return unauthorized()
+    await latency()
+    return HttpResponse.json({ items: db.listTrash().map(db.summary) })
+  }),
+
+  http.post('/api/forms/delete', async ({ request }) => {
+    if (!isAuthed()) return unauthorized()
+    await latency()
+    const body = (await request.json().catch(() => null)) as { form_ids?: string[] } | null
+    const done = db.deleteForms(body?.form_ids ?? [])
+    if (!done) return error(409, 'in_progress', 'אי אפשר למחוק טופס שעוד בעיבוד.')
+    return HttpResponse.json({ items: done.map(db.summary) })
+  }),
+
+  http.post('/api/forms/restore', async ({ request }) => {
+    if (!isAuthed()) return unauthorized()
+    await latency()
+    const body = (await request.json().catch(() => null)) as { form_ids?: string[] } | null
+    const done = db.restoreForms(body?.form_ids ?? [])
+    if (!done) return notFound()
+    return HttpResponse.json({ items: done.map(db.summary) })
   }),
 
   http.get('/api/forms/:id', async ({ params }) => {
@@ -224,6 +276,18 @@ export const handlers = [
     const ids = Array.isArray(body?.form_ids) ? body.form_ids.map(String) : []
     const dismissal = db.addDismissal(ids)
     return dismissal ? HttpResponse.json(dismissal, { status: 201 }) : error(400, 'bad_request', 'צריך לפחות שני טפסים קיימים.')
+  }),
+
+  // Export
+
+  http.post('/api/exports', async ({ request }) => {
+    if (!isAuthed()) return unauthorized()
+    await latency()
+    const data = await request.formData()
+    const file = data.get('file')
+    const count = Number(data.get('form_count'))
+    if (!(file instanceof File) || file.size === 0 || !(count >= 1)) return error(400, 'bad_request')
+    return HttpResponse.json({ sent_to: 'demo@example.com', form_count: count })
   }),
 
   // Phone capture
