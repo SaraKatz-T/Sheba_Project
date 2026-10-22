@@ -8,7 +8,8 @@
 - ביטחון high / good: לא צהוב. medium / low: צהוב, reason_code = low_confidence. ההערה של Gemini (באנגלית) בסוגריים.
 - כמה מספרים מרכזיים: ערך אחד, מופרד בפסיק.
 - תאריך בשדה: DD.MM.YYYY, כמו שהלקוח מציג. form_date בשורה מחושב ממנו בפורמט ISO (forms.py).
-- שם: הערך מהקריאה המוגדלת. אם היא שונה מקריאת העמוד המלא, או לא מצאה שם שהעמוד המלא מצא: צהוב,
+- שם: הערך מהקריאה המוגדלת. אם היא בטוחה (high / good): לא צהוב, גם אם קריאת העמוד המלא הייתה שונה
+  או לא בטוחה. אם היא לא בטוחה ושונה מקריאת העמוד המלא, או לא מצאה שם שהעמוד המלא מצא: צהוב,
   עם שתי הקריאות בהסבר.
 - confidence נשאר null: Gemini מחזיר high/good/medium/low ולא מספר, ולא ממציאים דיוק שאין.
 - מיקום (box): שם פרטי ושם משפחה - כל אחד את המיקום שלו מהקריאה המוגדלת, ואם אין - את name_box. שאר השדות - את ה-box של השדה עצמו;
@@ -113,6 +114,8 @@ def _name(record: dict, key: str) -> dict:
     if not isinstance(zoom_result, dict) or "error" in zoom_result or "skipped" in zoom_result:
         return page   # ההגדלה לא רצה או נכשלה: נשארים עם קריאת העמוד המלא
     zoom = _single(zoom_result.get(key))
+    if not zoom["uncertain"]:   # הקריאה המוגדלת מצאה שם ובטוחה בו: היא קובעת, בלי קשר לקריאת העמוד המלא
+        return zoom
     if zoom["reason_code"] == "missing":
         if page["reason_code"] == "missing":
             return page

@@ -2,10 +2,12 @@
 
 from fastapi import APIRouter, Depends, Response
 
+from commitment_extractor.name_zoom import render_name_crop
+
 from .. import crypto, db, events, review, settings, trash
 from ..auth import require_session
 from ..errors import ApiError
-from ..forms import field_from_row, list_forms, list_trash, load_form, load_form_detail
+from ..forms import field_from_row, list_forms, list_trash, load_form, load_form_detail, name_crop_source
 from ..models import (Field, FieldUpdate, FormDetail, FormIdsRequest, FormList, FormSummary, MergeRequest,
                       RejectRequest)
 
@@ -72,6 +74,21 @@ def get_page_image(form_id: str, number: int):
     except (OSError, crypto.CryptoError):
         raise ApiError(404, "image_deleted", "התמונה לא זמינה.")
     return Response(data, media_type="image/png")
+
+
+@router.get("/{form_id}/name-crop", response_class=Response)
+def get_name_crop(form_id: str):
+    """בדיוק התמונה שנשלחה למודל בקריאה המוגדלת של השם. נבנית מחדש מתמונת העמוד בכל בקשה,
+    ולא נשמרת בדיסק (יש בה שם של מטופל)."""
+    with db.connect() as conn:
+        source = name_crop_source(conn, form_id)
+    if source is None:
+        raise ApiError(404)
+    image_path, crop_box, scale = source
+    png = render_name_crop(crypto.read_file(settings.STORAGE_DIR / image_path), crop_box, scale)   # בזיכרון בלבד
+    if png is None:
+        raise ApiError(404)
+    return Response(content=png, media_type="image/png")
 
 
 @router.patch("/{form_id}/fields/{key}", response_model=Field)

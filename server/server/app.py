@@ -56,7 +56,7 @@ async def lifespan(app: FastAPI):
     live.bind_loop(None)
 
 
-app = FastAPI(title="Shaba Forms API", version="2.6", lifespan=lifespan)
+app = FastAPI(title="Shaba Forms API", version="2.7", lifespan=lifespan)
 errors.install(app)
 
 MAX_REQUEST_BYTES = settings.MAX_UPLOAD_BYTES + 1024 * 1024   # הקובץ + מעטפת ה-multipart

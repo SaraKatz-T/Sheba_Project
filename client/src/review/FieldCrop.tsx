@@ -90,3 +90,40 @@ export function FieldCrop({ page, box, label, cache, onOpen }: Props) {
     </button>
   )
 }
+
+/**
+ * The image the model received to read the name, exactly as sent: one image for both name
+ * fields, so what the technician sees is what the model saw. Clicking opens the whole page.
+ */
+export function SentCrop({ url, label, cache, onOpen }: { url: string; label: string; cache: PageImageCache; onOpen: () => void }) {
+  const image = useCachedImage(cache, url)
+  return (
+    <figure className="sent-crop">
+      <button
+        type="button"
+        className="crop crop-sent"
+        onClick={onOpen}
+        aria-label={`${label}: התמונה שנשלחה למודל. לחיצה פותחת את הטופס המלא`}
+        title="לחיצה פותחת את הטופס המלא"
+        tabIndex={-1}
+      >
+        {image.status === 'ready' && (
+          <>
+            <img src={image.src} alt="" draggable={false} />
+            <span className="crop-zoom" aria-hidden="true">
+              <Maximize2 size={14} />
+            </span>
+          </>
+        )}
+        {image.status === 'loading' && <span className="crop-loading" aria-hidden="true" />}
+        {image.status === 'error' && (
+          <span className="crop-error">
+            <CircleAlert size={16} aria-hidden="true" />
+            התמונה לא נטענה
+          </span>
+        )}
+      </button>
+      <figcaption>התמונה שנשלחה למודל לקריאת השם</figcaption>
+    </figure>
+  )
+}

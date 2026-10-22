@@ -1,4 +1,4 @@
-"""מבני הבקשות והתשובות, בשמות השדות של החוזה (api-contract.md גרסה 2.6 / src/api/types.ts)."""
+"""מבני הבקשות והתשובות, בשמות השדות של החוזה (api-contract.md גרסה 2.7 / src/api/types.ts)."""
 
 from typing import Literal
 
@@ -115,6 +115,9 @@ class Page(BaseModel):
 class FormDetail(FormSummary):
     pages: list[Page]
     fields: list[Field]
+    # התמונה שנשלחה למודל בקריאה המוגדלת של השם, כמו שהיא. null אם אין (לא נשלחה, נקראה לפני
+    # שהשרת התחיל לשמור את אזור החיתוך, או שתמונת העמוד כבר נמחקה)
+    name_crop_url: str | None = None
 
 
 class FieldUpdate(BaseModel):

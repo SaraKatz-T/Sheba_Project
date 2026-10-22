@@ -18,6 +18,9 @@ import { ShortcutsDialog } from '../review/ShortcutsDialog'
 import { RingsLoader } from '../components/BrandRings'
 import { recordLink } from './filters'
 
+// Both name fields show the one image the model read the name from.
+const NAME_KEYS = new Set(['first_name', 'last_name', 'full_name'])
+
 interface Props {
   id: string
   /** The next waiting record in the table, worked out when this one is done. */
@@ -290,6 +293,7 @@ export function RecordDetail({ id, nextPending, onDone, onClose, onDelete }: Pro
                 onSave={saveField}
                 onNavigate={(dir) => navigate(f.key, dir)}
                 onOpenImage={() => showViewer(f.key)}
+                sentImageUrl={NAME_KEYS.has(f.key) ? form.name_crop_url : null}
               />
             ))}
           </div>

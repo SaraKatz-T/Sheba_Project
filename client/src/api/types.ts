@@ -132,6 +132,8 @@ export interface Page {
 export interface FormDetail extends FormSummary {
   pages: Page[]
   fields: Field[]
+  /** The exact image sent to the model to read the name (both name fields show it); null if none. */
+  name_crop_url?: string | null
 }
 
 export interface FormList {

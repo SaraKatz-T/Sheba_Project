@@ -86,6 +86,16 @@ def _network_problem(e: Exception) -> str | None:
     return None
 
 
+COMMENT_LINE = re.compile(r"^\[//\]: #")   # הערה ב-Markdown: [//]: # (טקסט). לא מוצגת, ולא נשלחת למודל
+
+
+def load_prompt(path) -> str:
+    """קורא קובץ הוראות בלי שורות ההערה, כך שאפשר להשאיר בו גרסה ישנה להשוואה בלי שתגיע למודל."""
+    lines = path.read_text(encoding="utf-8").splitlines()
+    text = "\n".join(line for line in lines if not COMMENT_LINE.match(line.lstrip()))
+    return re.sub(r"\n{3,}", "\n\n", text).strip() + "\n"   # הרווחים שנשארו במקום ההערות
+
+
 class GeminiExtractor:
     def __init__(self):
         keys = load_api_keys()
@@ -106,7 +116,7 @@ class GeminiExtractor:
     @staticmethod
     def _make_config(instruction_path, schema_path, thinking_level=config.THINKING_LEVEL):
         return types.GenerateContentConfig(
-            system_instruction=instruction_path.read_text(encoding="utf-8"),
+            system_instruction=load_prompt(instruction_path),
             max_output_tokens=config.MAX_OUTPUT_TOKENS,
             response_mime_type="application/json",
             response_json_schema=json.loads(schema_path.read_text(encoding="utf-8")),
@@ -195,6 +205,8 @@ class GeminiExtractor:
         # סבב בין המפתחות: כל בקשה במפתח אחר, כדי לחלק את העומס
         if config.ROTATE_KEYS_EVERY_REQUEST and len(self.clients) > 1:
             self.current = (self.current + 1) % len(self.clients)
+        else:
+            self.current = 0   # תמיד מתחילים במפתח הראשון; עוברים לבא רק כשהוא נחסם בבקשה הזו
         for round_no in range(config.MAX_RETRIES + 1):
             for _ in range(len(self.clients)):
                 result, status = self._try_current_key(contents, generation_config, model)

@@ -11,7 +11,7 @@ import threading
 import time
 from datetime import timedelta
 
-from commitment_extractor.name_zoom import box_on_page, crop_name_region_with_box
+from commitment_extractor.name_zoom import box_on_page, crop_name_region_with_box, crop_scale
 
 from .. import crypto, db, events, settings
 from ..times import iso, utcnow
@@ -84,15 +84,20 @@ def _zoom_names(extractor, result: dict, png: bytes):
             record["name_zoom"] = {"skipped": "no valid name_box"}
             continue
         crop, crop_box = cropped
+        # בדיוק מה שנשלח למודל: אזור החיתוך בעמוד והגדלה. רק מספרים, לא התמונה (יש בה שם).
+        # בזכותם מסך הרשומה מציג את אותה תמונה (GET /api/forms/{id}/name-crop)
+        sent = {"crop_box": crop_box, "crop_scale": crop_scale(png, crop_box)}
         try:
             zoom = extractor.extract_page(crop, task="name")
         except Exception as e:   # ההגדלה לא הכרחית: בלעדיה נשארים עם קריאת העמוד המלא
-            record["name_zoom"] = {"error": type(e).__name__}
+            record["name_zoom"] = {"error": type(e).__name__, **sent}
             continue
         # המיקום של כל שם בתוך החיתוך ← מיקום בעמוד, כדי שכל שדה יקבל מסגרת משלו
         for key in ("first_name", "last_name"):
             if isinstance(zoom, dict) and isinstance(zoom.get(key), dict):
                 zoom[key]["page_box"] = box_on_page(zoom[key].get("box"), crop_box)
+        if isinstance(zoom, dict):
+            zoom.update(sent)
         record["name_zoom"] = zoom
 
 

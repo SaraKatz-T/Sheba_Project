@@ -2,7 +2,7 @@ import { Check, LoaderCircle } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { Field, FieldValueSource, Page } from '../api/types'
 import { isValidIsraeliId } from '../lib/israeliId'
-import { FieldCrop } from './FieldCrop'
+import { FieldCrop, SentCrop } from './FieldCrop'
 import type { PageImageCache } from './imageCache'
 
 export type SaveField = (key: string, value: string, source: FieldValueSource) => Promise<void>
@@ -18,13 +18,15 @@ interface ReviewProps {
   onSave: SaveField
   onNavigate: (dir: Direction) => void
   onOpenImage: () => void
+  /** For the name fields: the exact image the model read the name from, shown instead of a slice. */
+  sentImageUrl?: string | null
 }
 
 /**
  * A field to check: amber, editable, with a thin slice of the real form showing exactly
  * this field. Enter keeps the value (or saves the edit) and moves on.
  */
-export function ReviewField({ field, page, cache, inputRef, onSave, onNavigate, onOpenImage }: ReviewProps) {
+export function ReviewField({ field, page, cache, inputRef, onSave, onNavigate, onOpenImage, sentImageUrl }: ReviewProps) {
   const inputId = useId()
   const [draft, setDraft] = useState(field.value)
   const [saving, setSaving] = useState(false)
@@ -124,8 +126,11 @@ export function ReviewField({ field, page, cache, inputRef, onSave, onNavigate, 
           {error}
         </p>
       )}
-      {page && field.box && (
-        <FieldCrop page={page} box={field.box} label={field.label} cache={cache} onOpen={onOpenImage} />
+      {sentImageUrl ? (
+        <SentCrop url={sentImageUrl} label={field.label} cache={cache} onOpen={onOpenImage} />
+      ) : (
+        page &&
+        field.box && <FieldCrop page={page} box={field.box} label={field.label} cache={cache} onOpen={onOpenImage} />
       )}
     </div>
   )

@@ -784,3 +784,30 @@ button.rfield-approve:hover:not(:disabled) {
 .records tbody tr.is-final:hover {
   background: none;
 }
+
+/* The image sent to the model for the name: shown whole, not as a slice of the page */
+
+.sent-crop {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.crop.crop-sent {
+  max-height: 180px;
+  min-height: 60px;
+}
+
+.crop.crop-sent img {
+  position: static;
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 180px;
+  object-fit: contain;
+}
+
+.sent-crop figcaption {
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+}

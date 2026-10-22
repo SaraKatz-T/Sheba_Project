@@ -1157,9 +1157,31 @@ th[aria-sort] .th-sort {
   vertical-align: middle;
 }
 
-.trash-table .cell-file {
-  max-width: 220px;
+.trash-file td,
+.trash-file th {
+  background: var(--brand-50);
+}
+
+.trash-file-name {
+  font-weight: 700;
+  text-align: start;
+}
+
+.trash-file-name bdi {
+  display: inline-block;
+  max-width: 320px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  vertical-align: bottom;
+  margin-inline: var(--s-2);
+}
+
+.trash-file-name svg {
+  vertical-align: -3px;
+  color: var(--brand-600);
+}
+
+.trash-file-name .muted {
+  font-weight: 400;
 }

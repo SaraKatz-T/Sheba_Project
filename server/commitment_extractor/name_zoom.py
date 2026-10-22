@@ -51,17 +51,45 @@ def crop_name_region_with_box(png_bytes: bytes, box):
     left, right = int(max(0, cx - half_w)), int(min(width, cx + half_w))
     top, bottom = int(max(0, cy - half_h)), int(min(height, cy + half_h))
 
-    crop = img.crop((left, top, right, bottom))
     crop_box = [top / height * 1000, left / width * 1000, bottom / height * 1000, right / width * 1000]
+    scale = min(config.NAME_CROP_UPSCALE, MAX_SIDE / max(right - left, bottom - top, 1))
+    return _render(img, (left, top, right, bottom), scale), crop_box
 
-    # הגדלה
-    scale = min(config.NAME_CROP_UPSCALE, MAX_SIDE / max(crop.size))
+
+def _render(img: Image.Image, pixels, scale: float) -> bytes:
+    """חותך את האזור בפיקסלים ומגדיל. משותף לחיתוך שנשלח למודל ולהצגה שלו במסך, כך ששניהם זהים."""
+    crop = img.crop(pixels)
     if scale > 1:
         crop = crop.resize((int(crop.width * scale), int(crop.height * scale)), Image.LANCZOS)
-
     buf = io.BytesIO()
     crop.convert("RGB").save(buf, format="PNG")
-    return buf.getvalue(), crop_box
+    return buf.getvalue()
+
+
+def crop_scale(png_bytes: bytes, crop_box) -> float:
+    """פי כמה הוגדל חיתוך באזור הזה (נשמר עם התוצאה, כדי לשחזר אותו בדיוק גם אם ההגדרות ישתנו)."""
+    with Image.open(io.BytesIO(png_bytes)) as img:
+        width, height = img.size
+    ymin, xmin, ymax, xmax = crop_box
+    w = round(xmax / 1000 * width) - round(xmin / 1000 * width)
+    h = round(ymax / 1000 * height) - round(ymin / 1000 * height)
+    return min(config.NAME_CROP_UPSCALE, MAX_SIDE / max(w, h, 1))
+
+
+def render_name_crop(png_bytes: bytes, crop_box, scale) -> bytes | None:
+    """משחזר בדיוק את התמונה שנשלחה למודל בקריאה המוגדלת, מתוך האזור והגודל שנשמרו בזמן הקריאה."""
+    try:
+        ymin, xmin, ymax, xmax = (float(v) for v in crop_box)
+        scale = float(scale)
+    except (TypeError, ValueError):
+        return None
+    img = Image.open(io.BytesIO(png_bytes))
+    width, height = img.size
+    pixels = (round(xmin / 1000 * width), round(ymin / 1000 * height),
+              round(xmax / 1000 * width), round(ymax / 1000 * height))
+    if pixels[2] <= pixels[0] or pixels[3] <= pixels[1]:
+        return None
+    return _render(img, pixels, scale)
 
 
 def box_on_page(box_in_crop, crop_box):

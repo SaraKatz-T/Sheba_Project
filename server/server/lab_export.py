@@ -9,6 +9,7 @@ import json
 import logging
 import urllib.error
 import urllib.request
+import zipfile
 
 from . import settings
 from .errors import ApiError
@@ -26,11 +27,38 @@ TIMEOUT_SECONDS = 60
 XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
+# msoffcrypto כותב קובץ מוצפן פגום כשקובץ האקסל קטן מ-4096 בתים (שם הוא נשמר כ-mini stream),
+# ואקסל מסרב לפתוח אותו. לכן הקובץ נארז מחדש בלי דחיסה, ואם צריך מרופד, כך שתמיד יהיה גדול מזה
+MIN_PACKAGE_BYTES = 8192
+CONTENT_TYPES = "[Content_Types].xml"
+
+
+def _repack(content: bytes) -> bytes:
+    """אותו קובץ אקסל בדיוק, בלי דחיסה ובגודל של MIN_PACKAGE_BYTES לפחות.
+    הריפוד הוא הערת XML ריקה בסוף [Content_Types].xml, שאקסל מתעלם ממנה."""
+    source = zipfile.ZipFile(io.BytesIO(content))
+    parts = [(info.filename, source.read(info.filename)) for info in source.infolist()]
+
+    def build(pad: int) -> bytes:
+        out = io.BytesIO()
+        with zipfile.ZipFile(out, "w", zipfile.ZIP_STORED) as z:
+            for name, data in parts:
+                if name == CONTENT_TYPES and pad:
+                    data += b"<!--" + b" " * pad + b"-->"
+                z.writestr(name, data)
+        return out.getvalue()
+
+    packed = build(0)
+    if len(packed) < MIN_PACKAGE_BYTES:
+        packed = build(MIN_PACKAGE_BYTES - len(packed))
+    return packed
+
+
 def _protect(content: bytes) -> bytes:
     """מצפין את קובץ האקסל בסיסמה (ההצפנה המובנית של אקסל, AES-256). אקסל מבקש את הסיסמה בפתיחה."""
     from msoffcrypto.format.ooxml import OOXMLFile
     out = io.BytesIO()
-    OOXMLFile(io.BytesIO(content)).encrypt(settings.EXPORT_FILE_PASSWORD, out)
+    OOXMLFile(io.BytesIO(_repack(content))).encrypt(settings.EXPORT_FILE_PASSWORD, out)
     return out.getvalue()
 
 

@@ -8,6 +8,7 @@ import json
 import re
 from datetime import date
 
+from . import crypto
 from .models import Field, FormDetail, FormSummary, Page, Progress
 
 ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -118,4 +119,25 @@ def load_form_detail(conn, form_id: str) -> FormDetail | None:
     # העמודים ממוספרים בתוך הטופס, והטופס הוא עמוד אחד. תמונה שנמחקה (24 שעות אחרי אישור) לא מוצגת
     pages = [Page(number=1, width=page["width"], height=page["height"],
                   image_url=f"/api/forms/{form_id}/pages/1/image")] if page and page["image_path"] else []
-    return FormDetail(**_summary(row, fields).model_dump(), pages=pages, fields=[field_from_row(f) for f in fields])
+    name_crop_url = f"/api/forms/{form_id}/name-crop" if pages and name_crop_source(conn, form_id) else None
+    return FormDetail(**_summary(row, fields).model_dump(), pages=pages, fields=[field_from_row(f) for f in fields],
+                      name_crop_url=name_crop_url)
+
+
+def name_crop_source(conn, form_id: str):
+    """מאיפה לשחזר את התמונה שנשלחה למודל לקריאת השם: (image_path, crop_box, crop_scale), או None.
+    האזור נשמר עם תוצאת הקריאה (name_zoom). שורות שנקראו לפני כן - אין להן, ולא מנחשים."""
+    row = conn.execute(
+        "SELECT p.image_path, p.raw_result, r.position FROM forms f "
+        "JOIN pages p ON p.upload_id = f.upload_id AND p.number = f.page_number "
+        "LEFT JOIN records r ON r.id = f.record_id WHERE f.id = ?", (form_id,)).fetchone()
+    if row is None or not row["image_path"] or not row["raw_result"] or not row["position"]:
+        return None
+    try:
+        records = json.loads(crypto.open_value(row["raw_result"])).get("records") or []
+        zoom = records[row["position"] - 1].get("name_zoom") or {}
+    except (ValueError, IndexError, AttributeError):
+        return None
+    if not zoom.get("crop_box") or not zoom.get("crop_scale"):
+        return None
+    return row["image_path"], zoom["crop_box"], zoom["crop_scale"]
