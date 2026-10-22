@@ -22,7 +22,9 @@ from datetime import timedelta
 from pathlib import Path
 
 from cryptography.exceptions import InvalidTag
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 from . import settings
 from .times import iso, utcnow
@@ -55,14 +57,23 @@ _lock = threading.Lock()
 _db_key: bytes | None = None
 
 
+MIN_KEY_CHARS = 32   # מחרוזת אקראית קצרה מזה חלשה מדי כמפתח־על
+
+
 def _parse_key(text: str, name: str) -> bytes:
+    """מפתח־העל: base64 של 32 בתים בדיוק (כמו שנוצר ב-run_encrypt_setup.py). מחרוזת אקראית אחרת
+    (למשל מכפתור Generate של שירות הענן) הופכת למפתח של 32 בתים דרך HKDF-SHA256."""
+    text = text.strip()
     try:
-        key = base64.urlsafe_b64decode(text.strip() + "=" * (-len(text.strip()) % 4))
+        key = base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))
     except ValueError:
-        raise CryptoError(f"{name} לא תקין: צריך להיות מחרוזת base64 של 32 בתים.")
-    if len(key) != 32:
-        raise CryptoError(f"{name} לא תקין: צריך להיות 32 בתים (AES-256).")
-    return key
+        key = b""
+    if len(key) == 32:
+        return key
+    if len(text) < MIN_KEY_CHARS:
+        raise CryptoError(f"{name} קצר מדי: צריך לפחות {MIN_KEY_CHARS} תווים אקראיים.")
+    return HKDF(algorithm=hashes.SHA256(), length=32, salt=b"sheba-master-key",
+                info=b"data-key-wrapping").derive(text.encode("utf-8"))
 
 
 def _master_keys() -> list[bytes]:
