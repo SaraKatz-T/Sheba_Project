@@ -7,6 +7,7 @@ import { StatusChip } from '../components/StatusChip'
 import { formatDate, formatDateTime, formatNumber } from '../lib/format'
 import { israelDateKey } from '../lib/hebrewSearch'
 import { presetRange } from '../records/filters'
+import type { SentInfo } from './SentNotice'
 import { buildExportTable, fileStamp } from './table'
 import { toXlsx } from './xlsx'
 
@@ -61,7 +62,7 @@ function TriCheckbox({ checked, mixed, ...rest }: { checked: boolean; mixed: boo
 }
 
 /** Toolbar button that opens the send-to-lab dialog. */
-export function ExportMenu({ forms, onDone }: { forms: FormSummary[]; onDone: (message: string) => void }) {
+export function ExportMenu({ forms, onDone }: { forms: FormSummary[]; onDone: (sent: SentInfo) => void }) {
   const [open, setOpen] = useState(false)
   return (
     <>
@@ -79,7 +80,7 @@ export function ExportMenu({ forms, onDone }: { forms: FormSummary[]; onDone: (m
  * grouped by file so single forms or whole files can be left out, then builds the .xlsx and
  * sends it to the lab through the server (for now by email). Rejected forms are never sent.
  */
-function SendDialog({ all, onClose, onDone }: { all: FormSummary[]; onClose: () => void; onDone: (message: string) => void }) {
+function SendDialog({ all, onClose, onDone }: { all: FormSummary[]; onClose: () => void; onDone: (sent: SentInfo) => void }) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
   const today = israelDateKey(new Date().toISOString())
@@ -141,8 +142,9 @@ function SendDialog({ all, onClose, onDone }: { all: FormSummary[]; onClose: () 
       const details = await loadDetails(selected, (done) => setBusy({ sending: false, done }))
       const file = toXlsx(buildExportTable(details))
       setBusy({ sending: true, done: selected.length })
-      const result = await sendExport(file, `טפסי התחייבות ${fileStamp()}.xlsx`, selected.length)
-      onDone(`נשלח ל-${result.sent_to}: ${formatNumber(result.form_count)} טפסים`)
+      const fileName = `טפסי התחייבות ${fileStamp()}.xlsx`
+      const result = await sendExport(file, fileName, selected.length)
+      onDone({ sentTo: result.sent_to, count: result.form_count, fileName })
       ref.current?.close()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'השליחה נכשלה. כדאי לנסות שוב.')

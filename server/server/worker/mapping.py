@@ -8,9 +8,15 @@
 - ביטחון high / good: לא צהוב. medium / low: צהוב, reason_code = low_confidence. ההערה של Gemini (באנגלית) בסוגריים.
 - כמה מספרים מרכזיים: ערך אחד, מופרד בפסיק.
 - תאריך בשדה: DD.MM.YYYY, כמו שהלקוח מציג. form_date בשורה מחושב ממנו בפורמט ISO (forms.py).
-- שם: הערך מהקריאה המוגדלת. אם היא בטוחה (high / good): לא צהוב, גם אם קריאת העמוד המלא הייתה שונה
-  או לא בטוחה. אם היא לא בטוחה ושונה מקריאת העמוד המלא, או לא מצאה שם שהעמוד המלא מצא: צהוב,
-  עם שתי הקריאות בהסבר.
+- שם: משווים בין קריאת העמוד המלא לקריאה המוגדלת (גם מול השדה השני, כי קריאת העמוד המלא מחליפה
+  לפעמים בין שם פרטי לשם משפחה):
+  - זהות: הערך, בלי צהוב (אלא אם שתיהן לא בטוחות).
+  - דומות, אחת היא השנייה בלי אותיות (מור / מאור, גרן / גרין): הארוכה, בלי צהוב. כנראה שאותיות הושמטו.
+  - דומות, אותן אותיות בסדר אחר (אוזלאי / אזולאי), או אות אחת שונה באותו אורך, בשם של 4 אותיות
+    לפחות (סובה / טובה; לא גרש / גרן): המוגדלת, בלי צהוב.
+  - לא דומות בכלל (יסמין / יעל): המוגדלת, צהוב.
+  - העמוד המלא לא מצא שם ואין עם מה להשוות, או המוגדלת לא מצאה שם שהעמוד המלא מצא: צהוב.
+  בכל מקרה צהוב, שתי הקריאות בהסבר.
 - confidence נשאר null: Gemini מחזיר high/good/medium/low ולא מספר, ולא ממציאים דיוק שאין.
 - מיקום (box): שם פרטי ושם משפחה - כל אחד את המיקום שלו מהקריאה המוגדלת, ואם אין - את name_box. שאר השדות - את ה-box של השדה עצמו;
   כמה מספרים מרכזיים - מלבן אחד שמכסה את כולם. הלקוח מציג ממנו חיתוך מוגדל לשדות לבדיקה.
@@ -108,14 +114,43 @@ def _id_number(item) -> dict:
     return field
 
 
+def _letters(text: str) -> str:
+    return "".join(ch for ch in text if ch.isalpha())
+
+
+def _dropped_letters(short: str, long: str) -> bool:
+    """האם short הוא long בלי אות אחת או יותר, באותו סדר (מור / מאור, שן / שטרן)."""
+    short, long = _letters(short), _letters(long)
+    if not short or len(short) >= len(long):
+        return False
+    rest = iter(long)
+    return all(ch in rest for ch in short)
+
+
+def _relation(a: str, b: str) -> str | None:
+    """איך שתי קריאות של אותו שם קשורות: same / dropped (אחת היא השנייה בלי אותיות) /
+    reordered (אותן אותיות בסדר אחר) / one_letter (אות אחת שונה, אותו אורך) / None (לא דומות)."""
+    la, lb = _letters(a), _letters(b)
+    if not la or not lb:
+        return None
+    if la == lb:
+        return "same"
+    if _dropped_letters(la, lb) or _dropped_letters(lb, la):
+        return "dropped"
+    if sorted(la) == sorted(lb):
+        return "reordered"
+    # אות אחת שונה נחשבת דומה רק בשם של 4 אותיות לפחות: בשם קצר אות אחת היא שליש מהשם (גרש / גרן)
+    if len(la) == len(lb) >= 4 and sum(x != y for x, y in zip(la, lb)) == 1:
+        return "one_letter"
+    return None
+
+
 def _name(record: dict, key: str) -> dict:
     page = _single(record.get(key))
     zoom_result = record.get("name_zoom")
     if not isinstance(zoom_result, dict) or "error" in zoom_result or "skipped" in zoom_result:
         return page   # ההגדלה לא רצה או נכשלה: נשארים עם קריאת העמוד המלא
     zoom = _single(zoom_result.get(key))
-    if not zoom["uncertain"]:   # הקריאה המוגדלת מצאה שם ובטוחה בו: היא קובעת, בלי קשר לקריאת העמוד המלא
-        return zoom
     if zoom["reason_code"] == "missing":
         if page["reason_code"] == "missing":
             return page
@@ -124,10 +159,27 @@ def _name(record: dict, key: str) -> dict:
         return dict(value=page["value"], uncertain=True, reason_code="models_disagree",
                     reason=_note(f'בקריאת העמוד המלא נקרא "{page["value"]}", ובקריאה המוגדלת לא נמצא שם',
                                  item.get("issue") if isinstance(item, dict) else None))
-    if page["reason_code"] != "missing" and page["value"] != zoom["value"]:
+
+    # מול מה משווים: אותו שדה בקריאת העמוד המלא, ואם הוא לא דומה - גם השדה השני (שם פרטי ושם משפחה הפוכים)
+    other = _single(record.get(NAME_KEYS[1] if key == NAME_KEYS[0] else NAME_KEYS[0]))
+    candidates = [p for p in (page, other) if p["reason_code"] != "missing"]
+    if not candidates:
         return dict(value=zoom["value"], uncertain=True, reason_code="models_disagree",
-                    reason=f'בקריאת העמוד המלא נקרא "{page["value"]}", ובקריאה המוגדלת "{zoom["value"]}"')
-    return zoom
+                    reason=f'בקריאת העמוד המלא לא נמצא שם, ובקריאה המוגדלת נקרא "{zoom["value"]}". '
+                           f'אין קריאה שנייה להשוות אליה')
+    for candidate in candidates:
+        relation = _relation(candidate["value"], zoom["value"])
+        if relation == "same":   # שתי הקריאות הסכימו: צהוב רק אם שתיהן לא בטוחות
+            return zoom if (zoom["uncertain"] and candidate["uncertain"]) else {**zoom, "uncertain": False,
+                                                                                "reason_code": None, "reason": None}
+        if relation == "dropped":   # כנראה שאחת הקריאות השמיטה אותיות: לוקחים את הארוכה
+            longer = max(candidate["value"], zoom["value"], key=lambda v: len(_letters(v)))
+            return dict(value=longer, uncertain=False, reason_code=None, reason=None)
+        if relation in ("reordered", "one_letter"):
+            return {**zoom, "uncertain": False, "reason_code": None, "reason": None}
+    return dict(value=zoom["value"], uncertain=True, reason_code="models_disagree",
+                reason=f'בקריאת העמוד המלא נקרא "{page["value"] or other["value"]}", '
+                       f'ובקריאה המוגדלת "{zoom["value"]}": הקריאות לא דומות')
 
 
 def _coords(raw):

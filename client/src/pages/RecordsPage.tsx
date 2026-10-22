@@ -9,6 +9,7 @@ import { RingsLoader } from '../components/BrandRings'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { EmptyState } from '../components/EmptyState'
 import { ExportMenu } from '../export/ExportMenu'
+import { SentNotice, type SentInfo } from '../export/SentNotice'
 import { formatNumber } from '../lib/format'
 import {
   applyFilters,
@@ -60,6 +61,9 @@ export function RecordsPage() {
   }
 
   const [toast, setToast] = useState<{ text: string; n: number } | null>(null)
+  // The send-to-lab confirmation has its own card, with the file and where it went.
+  const [sent, setSent] = useState<{ info: SentInfo; n: number } | null>(null)
+  const closeSent = useCallback(() => setSent(null), [])
 
   // Records ticked for deletion. Only rows still on screen count.
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -115,7 +119,7 @@ export function RecordsPage() {
           <p aria-live="polite">{subtitle}</p>
         </div>
         <div className="page-head-actions">
-          <ExportMenu forms={all} onDone={(text) => setToast({ text, n: Date.now() })} />
+          <ExportMenu forms={all} onDone={(info) => setSent({ info, n: Date.now() })} />
           <Link className="btn btn-outline" to="/records/trash">
             <Trash2 size={18} aria-hidden="true" />
             סל מחזור
@@ -272,6 +276,7 @@ export function RecordsPage() {
           </>
         )}
       </p>
+      {sent && <SentNotice key={sent.n} sent={sent.info} onClose={closeSent} />}
     </>
   )
 }
