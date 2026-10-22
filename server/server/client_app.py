@@ -23,7 +23,8 @@ def install(app: FastAPI, dist: Path):
         log.warning("CLIENT_DIST מוגדר, אבל אין בו index.html (%s). צריך להריץ npm run build בלקוח", dist)
         return
 
-    @app.get("/{path:path}", include_in_schema=False)
+    # HEAD: בדיקות "האם האתר חי" של שירות הענן ושל ניטור חיצוני שולחות HEAD, לא GET
+    @app.api_route("/{path:path}", methods=["GET", "HEAD"], include_in_schema=False)
     def client(path: str):
         if path == "api" or path.startswith("api/"):
             raise ApiError(404)   # בקשת API שלא קיימת: JSON כמו בחוזה, ולא index.html
