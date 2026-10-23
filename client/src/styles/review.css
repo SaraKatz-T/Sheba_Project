@@ -752,7 +752,8 @@ button.rfield-approve:hover:not(:disabled) {
 
 .sent-notice {
   position: fixed;
-  top: calc(var(--s-5) + 64px);
+  /* just below the 110px top bar */
+  top: calc(110px + var(--s-3));
   left: var(--s-5);
   z-index: 60;
   width: min(420px, calc(100vw - 2 * var(--s-4)));

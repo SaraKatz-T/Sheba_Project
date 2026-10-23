@@ -18,6 +18,10 @@ export function SentNotice({ sent, onClose }: { sent: SentInfo; onClose: () => v
     return () => clearTimeout(t)
   }, [sent, onClose])
 
+  const dot = sent.fileName.lastIndexOf('.')
+  const base = dot > 0 ? sent.fileName.slice(0, dot) : sent.fileName
+  const ext = dot > 0 ? sent.fileName.slice(dot) : ''
+
   return (
     <aside className="sent-notice" role="status" aria-live="polite">
       <header className="sent-notice-head">
@@ -36,7 +40,11 @@ export function SentNotice({ sent, onClose }: { sent: SentInfo; onClose: () => v
             XLSX
           </span>
           <span className="sent-notice-file-text">
-            <bdi className="sent-notice-file-name">{sent.fileName}</bdi>
+            {/* The Hebrew name and the extension are isolated, so ".xlsx" stays at the end. */}
+            <span className="sent-notice-file-name">
+              <bdi>{base}</bdi>
+              <bdi dir="ltr">{ext}</bdi>
+            </span>
             <span className="muted">קובץ Excel · {sent.count === 1 ? 'שורה אחת' : `${formatNumber(sent.count)} שורות`}</span>
           </span>
         </div>
