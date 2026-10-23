@@ -9,7 +9,7 @@ A full-stack application that streamlines the processing of laboratory commitmen
 | Resource | Link |
 | --- | --- |
 | Live application | [Open the application](https://sheba-f05x.onrender.com) *(demo instance; the first load can take about a minute)* |
-| Demo video | Coming soon |
+| Demo video | [Watch the demo (53 seconds)](docs/demo-video.mp4) |
 | Source code | [GitHub repository](https://github.com/SaraKatz-T/Sheba_Project) |
 
 ## The Challenge
